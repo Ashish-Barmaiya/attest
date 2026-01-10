@@ -1,26 +1,22 @@
-import { appendEvent } from "../core/append.js";
+import "../db/schema.js";
+import { appendEventPersistent } from "../db/appendPersistent.js";
+import { loadAllEvents } from "../db/loadAll.js";
 import { verifyChain } from "../core/verify.js";
 
-let chain: any[] = [];
-let headHash = "GENESIS";
+appendEventPersistent({
+  action: "ASSET_ADDED",
+  actor: { type: "user", id: "u1" },
+  resource: { type: "vault", id: "v1" },
+});
 
-for (let i = 1; i <= 5; i++) {
-  const event = appendEvent(headHash, i, {
-    action: "TEST_EVENT",
-    actor: { type: "user", id: "u1" },
-    resource: { type: "vault", id: "v1" },
-  });
+appendEventPersistent({
+  action: "ASSET_REMOVED",
+  actor: { type: "user", id: "u1" },
+  resource: { type: "vault", id: "v1" },
+});
 
-  chain.push(event);
-  headHash = event.chainHash;
-}
+const events = loadAllEvents();
 
-console.log("Verifying clean chain...");
-verifyChain(chain);
+console.log("Verifying persisted chain...");
+verifyChain(events);
 console.log("OK");
-
-// Tamper
-chain[4].payload.action = "HACKED";
-
-console.log("Verifying tampered chain...");
-verifyChain(chain);
