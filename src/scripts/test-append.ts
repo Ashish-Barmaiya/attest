@@ -43,7 +43,12 @@ async function testAppend() {
 
     // Verify in DB
     const event = await prisma.auditEvent.findUnique({
-      where: { sequence: data.sequence },
+      where: {
+        projectId_sequence: {
+          projectId: data.projectId,
+          sequence: data.sequence,
+        },
+      },
     });
 
     if (!event) {

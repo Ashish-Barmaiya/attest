@@ -18,8 +18,14 @@ app.post("/events", async (req, res) => {
     });
   }
 
+  const projectId = req.header("x-project-id");
+
+  if (!projectId) {
+    return res.status(400).json({ error: "Missing x-project-id header" });
+  }
+
   try {
-    const event = await appendEventPersistent(parsed.data);
+    const event = await appendEventPersistent(projectId, parsed.data);
 
     res.status(201).json({
       sequence: event.sequence,
@@ -27,6 +33,9 @@ app.post("/events", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    if (err instanceof Error && err.message === "Unknown project") {
+      return res.status(404).json({ error: "Unknown project" });
+    }
     res.status(500).json({ error: "Failed to append event" });
   }
 });

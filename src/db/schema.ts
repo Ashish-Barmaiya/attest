@@ -3,13 +3,13 @@ import { prisma } from "./database.js";
 export async function initDb() {
   // Ensure the Genesis block exists
   const genesis = await prisma.chainHead.findUnique({
-    where: { id: 1 },
+    where: { projectId: "1" },
   });
 
   if (!genesis) {
     await prisma.chainHead.create({
       data: {
-        id: 1,
+        projectId: "1",
         lastSequence: 0,
         lastChainHash: "GENESIS",
       },

@@ -1,4 +1,4 @@
-import { withDb } from "./database.js";
+import { prisma } from "./database.js";
 import type { AuditEvent } from "../core/event.js";
 
 /**
@@ -13,27 +13,17 @@ type AuditEventRow = {
   chain_hash: string;
 };
 
-export function loadAllEvents(): AuditEvent[] {
-  return withDb((db) => {
-    const rows = db
-      .prepare(
-        `SELECT
-           sequence,
-           payload_json,
-           payload_hash,
-           prev_chain_hash,
-           chain_hash
-         FROM audit_events
-         ORDER BY sequence ASC`
-      )
-      .all() as AuditEventRow[];
-
-    return rows.map((row) => ({
-      sequence: row.sequence,
-      payload: JSON.parse(row.payload_json),
-      payloadHash: row.payload_hash,
-      prevChainHash: row.prev_chain_hash,
-      chainHash: row.chain_hash,
-    }));
+export async function loadAllEvents(projectId: string): Promise<AuditEvent[]> {
+  const rows = await prisma.auditEvent.findMany({
+    where: { projectId },
+    orderBy: { sequence: "asc" },
   });
+
+  return rows.map((row) => ({
+    sequence: row.sequence,
+    payload: JSON.parse(row.payloadJson),
+    payloadHash: row.payloadHash,
+    prevChainHash: row.prevChainHash,
+    chainHash: row.chainHash,
+  }));
 }

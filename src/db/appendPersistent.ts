@@ -3,35 +3,36 @@ import { appendEvent } from "../core/append.js";
 import type { AuditPayload, AuditEvent } from "../core/event.js";
 
 export async function appendEventPersistent(
+  projectId: string,
   payload: AuditPayload
 ): Promise<AuditEvent> {
-  return await prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx) => {
     const head = await tx.chainHead.findUnique({
-      where: { id: 1 },
+      where: { projectId },
     });
 
     if (!head) {
-      throw new Error("Chain head missing");
+      throw new Error("Unknown project");
     }
 
-    const sequence = head.lastSequence + 1;
-    const prevHash = head.lastChainHash;
+    const nextSequence = head.lastSequence + 1;
 
-    const event = appendEvent(prevHash, sequence, payload);
+    const event = appendEvent(head.lastChainHash, nextSequence, payload);
 
     await tx.auditEvent.create({
       data: {
+        projectId,
         sequence: event.sequence,
         payloadJson: JSON.stringify(event.payload),
         payloadHash: event.payloadHash,
         prevChainHash: event.prevChainHash,
         chainHash: event.chainHash,
-        createdAt: BigInt(Date.now()), // Prisma BigInt expects BigInt or number
+        createdAt: BigInt(Date.now()),
       },
     });
 
     await tx.chainHead.update({
-      where: { id: 1 },
+      where: { projectId },
       data: {
         lastSequence: event.sequence,
         lastChainHash: event.chainHash,

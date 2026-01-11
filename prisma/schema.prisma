@@ -14,12 +14,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model project {
+  id        String @id
+  createdAt BigInt
+
+  @@map("projects")
+}
+
 /**
  * Holds the current head of the audit chain.
  * Exactly ONE row, id = 1.
  */
 model ChainHead {
-  id            Int    @id
+  projectId     String @id
   lastSequence  Int
   lastChainHash String
 
@@ -32,12 +39,14 @@ model ChainHead {
  * No deletes.
  */
 model AuditEvent {
-  sequence      Int    @id
+  projectId     String
+  sequence      Int
   payloadJson   String
   payloadHash   String
   prevChainHash String
   chainHash     String
   createdAt     BigInt
 
+  @@id([projectId, sequence])
   @@map("audit_events")
 }
