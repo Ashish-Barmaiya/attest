@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * Holds the current head of the audit chain.
+ * Exactly ONE row, id = 1.
+ */
+model ChainHead {
+  id            Int    @id
+  lastSequence  Int
+  lastChainHash String
+
+  @@map("chain_head")
+}
+
+/**
+ * Append-only audit log.
+ * No updates.
+ * No deletes.
+ */
+model AuditEvent {
+  sequence      Int    @id
+  payloadJson   String
+  payloadHash   String
+  prevChainHash String
+  chainHash     String
+  createdAt     BigInt
+
+  @@map("audit_events")
+}

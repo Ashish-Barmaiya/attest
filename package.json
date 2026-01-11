@@ -4,6 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev": "tsx src/http/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,15 +12,18 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.5",
+    "@types/pg": "^8.16.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.0",
+    "@prisma/client": "^6.19.1",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "pg": "^8.16.3",
+    "prisma": "^6.19.1",
     "zod": "^4.3.5"
   }
 }

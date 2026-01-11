@@ -1,12 +1,4 @@
-import Database from "better-sqlite3";
+import "dotenv/config";
+import { PrismaClient } from "../../node_modules/.prisma/client/client.js";
 
-const db = new Database("audit.db");
-
-db.pragma("journal_mode = WAL");
-db.pragma("synchronous = FULL");
-
-type DbInstance = InstanceType<typeof Database>;
-
-export function withDb<T>(fn: (db: DbInstance) => T): T {
-  return fn(db);
-}
+export const prisma = new PrismaClient();
