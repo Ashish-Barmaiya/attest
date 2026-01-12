@@ -50,3 +50,12 @@ model AuditEvent {
   @@id([projectId, sequence])
   @@map("audit_events")
 }
+
+model ApiKey {
+  keyHash   String  @id
+  projectId String
+  createdAt BigInt
+  revokedAt BigInt?
+
+  @@map("api_keys")
+}
