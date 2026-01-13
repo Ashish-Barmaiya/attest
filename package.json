@@ -1,29 +1,33 @@
 {
-  "name": "audit-log",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "attest",
+  "version": "0.1.0",
+  "description": "Multi-tenant tamper-evident audit logging service with external anchoring",
   "type": "module",
+  "private": true,
+  "bin": {
+    "attest": "dist/cli/index.js"
+  },
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/http/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.0.5",
-    "@types/pg": "^8.16.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "build": "tsc",
+    "start": "node dist/http/server.js",
+    "lint": "echo \"(optional) add eslint later\"",
+    "test": "echo \"Tests are run via scripts/\""
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "pg": "^8.16.3",
-    "prisma": "^6.19.1",
     "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.5",
+    "@types/pg": "^8.16.0",
+    "prisma": "^6.19.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

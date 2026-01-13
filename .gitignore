@@ -1,7 +1,27 @@
+# Node / TS
 node_modules/
 dist/
+
+# Environment secrets
 .env
 .env.*
-.DS_Store
 
+# Prisma
+prisma/migrations/*
+!prisma/migrations/.gitkeep
 /src/generated/prisma
+
+# Anchors (external trust boundary)
+anchors/
+attest-anchors/
+
+# Logs
+*.log
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+
+
