@@ -18,6 +18,11 @@ app.get("/health", (req, res) => {
 });
 
 // --- Authenticated Routes ---
+import { adminRouter } from "./admin.js";
+import { requireAdmin } from "./auth.js";
+
+app.use("/admin", requireAdmin, adminRouter);
+
 app.use(requireAuth);
 
 app.post("/events", async (req, res) => {
@@ -96,13 +101,19 @@ app.get("/verify", async (req, res) => {
 });
 
 // Initialize DB then start server
-initDb()
-  .then(() => {
-    app.listen(3000, () => {
-      console.log("Audit service listening on :3000");
+import { fileURLToPath } from "url";
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  initDb()
+    .then(() => {
+      app.listen(3000, () => {
+        console.log("Audit service listening on :3000");
+      });
+    })
+    .catch((err) => {
+      console.error("Failed to initialize database:", err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error("Failed to initialize database:", err);
-    process.exit(1);
-  });
+}
+
+export { app };

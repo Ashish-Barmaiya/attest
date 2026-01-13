@@ -1,20 +1,24 @@
 # Attest: Tamper-Evident Audit Service
 
-Attest is a production-grade, multi-tenant audit logging system designed to provide cryptographic proof of history integrity. It combines internal hash chaining with external anchoring to detect any modification, reordering, or deletion of audit logs, even by a malicious operator with full database access.
+Attest is a multi-tenant, append-only audit logging service designed to provide cryptographic proof that audit history has not been silently rewritten. Each tenant (project) maintains an independent, isolated audit log with its own hash chain and anchoring history. The system combines internal hash chaining with external anchoring to detect modification, reordering, truncation, or rollback of audit events—even in the presence of a malicious operator with full database access.
 
-It solves the "who watches the watcher" problem by ensuring that once an event is acknowledged and anchored, its history cannot be rewritten without detection.
+Traditional audit logs can prove internal consistency, but they cannot prove that the history itself is original. A sufficiently powerful attacker can rewrite past events, recompute all hashes, and present a forged yet internally valid log. Attest addresses this gap by periodically publishing immutable checkpoints of each project’s audit history to an external, append-only system. These checkpoints bind a project’s audit state to an external source of truth, making history rewrites detectable without requiring trust in the service operator.
+
+Attest is built for systems where audit integrity matters more than convenience: security-sensitive applications, access control systems, financial or administrative workflows, and any environment where audit logs must remain verifiable long after they are written. It is intentionally API-first and verification-centric, treating audit ingestion, storage, and independent verification as separate concerns.
 
 ## Who This Is For
 
-**Intended Users:**
-- Developers building high-assurance systems (e.g., financial ledgers, access control systems, healthcare records).
-- Security engineers requiring non-repudiation for administrative actions.
-- Security and compliance teams who need independently verifiable proof that audit history has not been rewritten
+### Intended Users
 
-**Non-Intended Users:**
-- General application logging (use ELK, Splunk, etc.).
-- High-volume analytics or clickstream tracking.
-- Systems requiring mutable history or "right to be forgotten" (Attest is strictly append-only).
+* Developers building security-sensitive or high-assurance systems.
+* Security and compliance teams who require independently verifiable proof that audit history has not been rewritten.
+* Operators who want tamper-evidence without running complex cryptographic infrastructure. 
+
+### Not Intended Users
+
+* General application logging or analytics.
+* High-volume telemetry or clickstream data.
+* Systems requiring mutable history or “right to be forgotten” semantics.
 
 ## Core Concepts
 
@@ -23,6 +27,12 @@ It solves the "who watches the watcher" problem by ensuring that once an event i
 - **Hash Chaining**: The mechanism where `CurrentHash = SHA256(PreviousHash + SHA256(Payload))`. This ensures that changing any historical event invalidates all subsequent hashes.
 - **Chain Head**: The sequence number and hash of the most recent event in a project.
 - **Anchoring**: The process of periodically publishing the Chain Head to a trusted external system (e.g., an append-only Git repository). This prevents "split-view" attacks where an operator forks the history.
+
+## Documentation
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Security Model](./docs/SECURITY.md)
+- [Operations](./docs/OPERATIONS.md)
+- [Control Plane & CLI](./docs/CONTROL_PLANE.md)
 
 ## Developer Usage
 

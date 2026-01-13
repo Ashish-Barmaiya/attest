@@ -75,3 +75,52 @@ export function getProjectContext(req: Request): string {
   }
   return req.projectId;
 }
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.header("Authorization");
+  const token = authHeader?.replace("Bearer ", "");
+  const adminToken = process.env.ATTEST_ADMIN_TOKEN;
+
+  if (!adminToken) {
+    console.error("ATTEST_ADMIN_TOKEN is not set!");
+    return res.status(500).json({ error: "Server configuration error" });
+  }
+
+  // Constant-time comparison
+  let isValid = true;
+  let tokenToCompare = token || "";
+
+  // If token is missing or wrong length, we still compare against something to simulate work?
+  // Actually, for a simple token check, just ensuring we compare both is usually enough.
+  // But strictly speaking, we want to avoid timing attacks on length.
+  // However, for this task, a simple constant-time string compare is sufficient if lengths match.
+  // If lengths mismatch, it's obviously wrong, but we should still try to take constant time.
+
+  if (!token || typeof token !== "string") {
+    isValid = false;
+    tokenToCompare = "invalid-token-placeholder";
+  }
+
+  // Use crypto.timingSafeEqual
+  // It requires buffers of equal length.
+  const bufferA = Buffer.from(tokenToCompare);
+  const bufferB = Buffer.from(adminToken);
+
+  if (bufferA.length !== bufferB.length) {
+    isValid = false;
+    // To avoid timing leak on length, we could compare bufferB against itself or something,
+    // but usually length leak is considered acceptable for tokens or hard to avoid completely without padding.
+    // Let's just fail. The requirement says "Use constant-time comparison".
+    // If lengths differ, timingSafeEqual throws.
+  } else {
+    if (!crypto.timingSafeEqual(bufferA, bufferB)) {
+      isValid = false;
+    }
+  }
+
+  if (!isValid) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  next();
+}

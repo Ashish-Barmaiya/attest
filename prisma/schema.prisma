@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../node_modules/.prisma/client"
@@ -16,6 +10,7 @@ datasource db {
 
 model project {
   id        String @id
+  name      String
   createdAt BigInt
 
   @@map("projects")
@@ -23,7 +18,6 @@ model project {
 
 /**
  * Holds the current head of the audit chain.
- * Exactly ONE row, id = 1.
  */
 model ChainHead {
   projectId     String @id
@@ -34,9 +28,7 @@ model ChainHead {
 }
 
 /**
- * Append-only audit log.
- * No updates.
- * No deletes.
+ * Append-only audit log..
  */
 model AuditEvent {
   projectId     String
@@ -51,6 +43,9 @@ model AuditEvent {
   @@map("audit_events")
 }
 
+/**
+ * API keys for authentication.
+ */
 model ApiKey {
   keyHash   String  @id
   projectId String
