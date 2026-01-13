@@ -47,7 +47,8 @@ model AuditEvent {
  * API keys for authentication.
  */
 model ApiKey {
-  keyHash   String  @id
+  id        String  @id @default(uuid())
+  keyHash   String  @unique
   projectId String
   createdAt BigInt
   revokedAt BigInt?

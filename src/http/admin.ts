@@ -80,24 +80,8 @@ adminRouter.post("/projects/:projectId/keys", async (req, res) => {
     // Generate key
     const key = crypto.randomBytes(32).toString("hex");
     const keyHash = crypto.createHash("sha256").update(key).digest("hex");
-    const keyId = crypto.randomUUID(); // We don't have a keyId in the schema?
-    // Schema: model ApiKey { keyHash String @id, ... }
-    // The schema uses keyHash as ID.
-    // But the requirement says: Response { apiKey: "...", keyId: "..." }
-    // And Revoke: DELETE /admin/keys/:keyId
-    // If I use keyHash as keyId, that leaks the hash?
-    // No, keyHash is the hash of the key.
-    // If I give keyHash as keyId, the admin can revoke it.
-    // Is it safe to expose keyHash?
-    // Usually yes, it's a SHA256 of a high entropy secret.
-    // But maybe I should add a separate ID?
-    // Again, schema constraints.
-    // Schema: ApiKey { keyHash String @id, projectId String, createdAt BigInt, revokedAt BigInt? }
-    // So keyHash IS the identifier.
-    // I will use keyHash as keyId for now, or maybe I should add an ID column?
-    // If I can't change schema, I must use keyHash as keyId.
 
-    await prisma.apiKey.create({
+    const apiKey = await prisma.apiKey.create({
       data: {
         keyHash,
         projectId,
@@ -107,7 +91,7 @@ adminRouter.post("/projects/:projectId/keys", async (req, res) => {
 
     res.status(201).json({
       apiKey: key,
-      keyId: keyHash, // Using keyHash as keyId
+      keyId: apiKey.id,
     });
   } catch (err) {
     console.error("Failed to create API key:", err);
@@ -116,12 +100,12 @@ adminRouter.post("/projects/:projectId/keys", async (req, res) => {
 });
 
 // 4. Revoke API Key
-adminRouter.delete("/keys/:keyId", async (req, res) => {
-  const { keyId } = req.params; // This is keyHash
+adminRouter.delete("/keys/:keyHash", async (req, res) => {
+  const { keyHash } = req.params; // This is keyHash
 
   try {
     await prisma.apiKey.update({
-      where: { keyHash: keyId },
+      where: { keyHash },
       data: {
         revokedAt: BigInt(Date.now()),
       },
