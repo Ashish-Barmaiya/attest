@@ -15,7 +15,7 @@ This guide explains how a developer actually uses Attest in a real system, from 
 *   Designed for security-critical systems
 
 ### Attest IS NOT:
-*   A SaaS product
+*   A hosted SaaS or managed service
 *   A general logging system
 *   An analytics platform
 *   A UI-driven dashboard
@@ -49,7 +49,10 @@ Once written, events cannot be changed without detection.
 Each event’s hash depends on:
 `SHA256(previousChainHash + SHA256(payload))`
 
-This ensures that modifying any past event invalidates all future events.
+This ensures that modifying any past event invalidates all future events unless the attacker recomputes the entire chain.
+
+### Chain Head
+The sequence number and hash of the most recent event in a project.
 
 ### Anchoring
 Anchoring periodically commits the current chain head to an external, append-only system (e.g., Git).
@@ -62,13 +65,30 @@ Anchoring prevents:
 ## 3. Deployment Model
 Attest is self-hosted.
 You deploy it:
-*   On a VM
-*   On Fly.io
-*   On any Node-compatible environment
+*   On a VM or container platform
+*   Using Docker Compose or a standard Node.js runtime
 
 You are the operator of the Attest service.
 
-## 4. Environment Setup (Attest Server)
+## 4. Environment Setup (Docker Compose)
+The easiest way to run Attest is with Docker Compose.
+
+1.  Create a `docker-compose.yml` (or use the provided one).
+2.  Start the services:
+
+```bash
+docker-compose up -d
+```
+
+This starts:
+*   **Postgres**: Database for storing events.
+*   **Attest Server**: The API server listening on port 3000.
+
+Configuration is handled via environment variables in `docker-compose.yml`.
+
+## 5. Environment Setup (Manual)
+If you prefer running without Docker:
+
 Set the following environment variables:
 
 ```bash
@@ -88,11 +108,14 @@ Attest now listens for:
 *   Admin requests (`/admin/*`)
 *   Application audit events (`/events`)
 
-## 5. Control Plane vs Data Plane
+The Docker Compose setup is intended for local development, testing, and self-hosted production deployments.
+
+## 6. Control Plane vs Data Plane
 Attest has two distinct interfaces.
 
 ### Control Plane (Operator Only)
 Used by the person who deployed Attest.
+The Control Plane is not exposed to application code and should never be accessible from untrusted environments.
 
 **Capabilities:**
 *   Create projects
@@ -114,7 +137,7 @@ Used by your application code.
 **Authentication:**
 *   Project-scoped API keys
 
-## 6. Using the Attest CLI (Operator)
+## 7. Using the Attest CLI (Operator)
 
 ### Configure CLI
 ```bash
@@ -156,7 +179,7 @@ attest key revoke <keyId>
 ```
 Revocation prevents future writes but preserves history.
 
-## 7. Integrating Attest into Your Application
+## 8. Integrating Attest into Your Application
 
 ### Application Environment Variables
 ```bash
@@ -186,6 +209,7 @@ await fetch(`${process.env.ATTEST_API_URL}/events`, {
   })
 });
 ```
+Applications should treat Attest as write-only infrastructure and should not attempt to interpret or mutate stored audit data.
 
 Attest responds with:
 ```json
@@ -196,7 +220,7 @@ Attest responds with:
 ```
 Your application does not need to store this response.
 
-## 8. Anchoring (Operator Responsibility)
+## 9. Anchoring (Operator Responsibility)
 Anchoring should run periodically.
 
 Example:
@@ -208,8 +232,9 @@ git commit -am "anchor: checkpoint"
 git push
 ```
 Anchors must live in a separate repository.
+Anchoring is intentionally asynchronous and does not block event ingestion.
 
-## 9. Verifying Audit History
+## 10. Verifying Audit History
 Verification is done during:
 *   Incidents
 *   Audits
@@ -227,21 +252,21 @@ Verification checks:
 
 If verification fails, tampering occurred.
 
-## 10. Security Guarantees
+## 11. Security Guarantees
 
 ### Attest guarantees:
-*   Append-only history
+*   Detection of malicious operators
 *   Cryptographic integrity
+*   Append-only history
 *   Multi-tenant isolation
 *   Tamper evidence
-*   Detection of malicious operators
 
 ### Attest does not guarantee:
 *   Data correctness
 *   Availability
 *   Protection against API key leakage
 
-## 11. Threat Model (Summary)
+## 12. Threat Model (Summary)
 
 ### Attest defends against:
 *   History rewrite
@@ -254,7 +279,9 @@ If verification fails, tampering occurred.
 *   You protect admin credentials
 *   You run verification when needed
 
-## 12. Typical Usage Pattern
+Attest assumes that attackers may have long-term access to the database.
+
+## 13. Typical Usage Pattern
 1.  Deploy Attest
 2.  Create project
 3.  Issue API key
@@ -264,11 +291,11 @@ If verification fails, tampering occurred.
 
 That’s it.
 
-## 13. When You Should Use Attest
+## 14. When You Should Use Attest
 
 ### Use Attest if:
 *   Audit integrity matters
-*   You cannot trust your own infrastructure
+*   You cannot fully trust your own infrastructure
 *   You need post-incident proof
 
 ### Do not use Attest if:

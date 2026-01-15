@@ -124,9 +124,9 @@ async function verifyProject(projectId: string, anchorDir: string) {
   console.log("Verifying chain integrity...");
   try {
     verifyChain(events);
-    console.log("✅ Chain integrity verified.");
+    console.log("Chain integrity verified.");
   } catch (err) {
-    console.error("❌ Chain integrity verification failed:", err);
+    console.error("Chain integrity verification failed:", err);
     process.exit(1);
   }
 
@@ -141,12 +141,12 @@ async function verifyProject(projectId: string, anchorDir: string) {
     );
 
     verifyAgainstAnchor(events, anchor);
-    console.log("✅ Anchor verification passed.");
+    console.log("Anchor verification passed.");
   } catch (err: any) {
     if (err.message && err.message.includes("Anchor file not found")) {
-      console.warn("⚠️  No anchor file found. Skipping anchor verification.");
+      console.warn("No anchor file found. Skipping anchor verification.");
     } else {
-      console.error("❌ Anchor verification failed:", err.message);
+      console.error("Anchor verification failed:", err.message);
       process.exit(1);
     }
   }

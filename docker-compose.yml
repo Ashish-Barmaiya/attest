@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: attest-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: attest
+      POSTGRES_PASSWORD: attest
+      POSTGRES_DB: attest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attest"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  attest:
+    build: .
+    container_name: attest-server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://attest:attest@db:5432/attest
+      ATTEST_ADMIN_TOKEN: dev-admin-token
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    volumes:
+      - anchors:/anchors
+
+volumes:
+  postgres_data:
+  anchors:

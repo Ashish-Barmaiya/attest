@@ -7,17 +7,19 @@ Attest operates on a strict separation of concerns between **ingestion**, **stor
 1.  **Ingestion (Writer)**:
     -   Clients submit events via HTTP API.
     -   The service authenticates the request via API Key.
-    -   The service computes the cryptographic hash of the event payload and links it to the previous chain hash.
+    -   The service computes the cryptographic hash of the event payload and links it to the previous chain hash for the project.
     -   The event is appended to the database.
 
 2.  **Storage (Database)**:
     -   **`audit_events`**: Stores the ordered log of events. Columns: `projectId`, `sequence`, `payloadJson`, `payloadHash`, `prevChainHash`, `chainHash`.
     -   **`chain_head`**: Stores the pointer to the latest event (`lastSequence`, `lastChainHash`) for optimistic locking and quick lookups.
+    -   Updates to `chain_head` are serialized per project to ensure a single, linear history.
 
 3.  **Anchoring (External)**:
     -   A background process periodically reads the `chain_head` of all projects.
     -   It writes an immutable summary (Anchor) to an external, append-only medium (e.g., a Git repository).
     -   This creates a checkpoint that cannot be altered by the database operator.
+    -   The anchoring system is assumed to be outside the control of the Attest database operator.
 
 4.  **Verification (Reader)**:
     -   Clients or auditors download the full event log from the service.
@@ -35,7 +37,7 @@ This step ensures that the database has not been corrupted by random bit rot or 
 -   Verify `e[i].prevChainHash == e[i-1].chainHash`.
 -   Verify `e[i].chainHash == SHA256(e[i].prevChainHash + SHA256(e[i].payload))`.
 
-**Guarantee**: If this passes, the log is internally consistent. However, it does *not* prove that the history hasn't been rewritten by a sophisticated attacker who recomputed all hashes.
+**Guarantee**: If this passes, the log is internally consistent. However, it does *not* prove that the history is the original history if a sophisticated attacker recomputed all hashes.
 
 ### 2. Anchor Verification (`verifyAgainstAnchor`)
 This step defends against "split-view" attacks and history rewriting.
@@ -45,6 +47,8 @@ This step defends against "split-view" attacks and history rewriting.
 -   Verify that `event[N].chainHash === H`.
 
 **Guarantee**: If this passes, the log provided by the service matches the state that was previously committed to the external anchor.
+
+Verification does not require trust in the Attest service at verification time.
 
 ## Anchoring: Design and Proof
 
@@ -58,6 +62,8 @@ A standard hash chain only proves that the current state is derived from *some* 
 To a verifier, this rewritten chain looks perfectly valid. Anchoring solves this by publishing checkpoints to a system the attacker does not control.
 
 ### Adversarial Testing
+This test models a strong attacker with long-term, unrestricted database access.
+
 We validated this design against a "Strong Attacker" model. The attacker:
 1.  Gained full access to the database.
 2.  Modified a historical event (sequence 3).

@@ -7,8 +7,6 @@ dist/
 .env.*
 
 # Prisma
-prisma/migrations/*
-!prisma/migrations/.gitkeep
 /src/generated/prisma
 
 # Anchors (external trust boundary)
@@ -22,6 +20,3 @@ attest-anchors/
 .DS_Store
 .vscode/
 .idea/
-
-
-

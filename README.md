@@ -1,72 +1,129 @@
-# Attest: Tamper-Evident Audit Service
+# Attest — Tamper-Evident Audit Service
 
-Attest is a multi-tenant, append-only audit logging service designed to provide cryptographic proof that audit history has not been silently rewritten. Each tenant (project) maintains an independent, isolated audit log with its own hash chain and anchoring history. The system combines internal hash chaining with external anchoring to detect modification, reordering, truncation, or rollback of audit events—even in the presence of a malicious operator with full database access.
+Attest is a **multi-tenant, append-only audit logging service** that provides cryptographic proof that audit history has **not been silently rewritten**.  
+Each tenant (project) maintains an isolated audit log with its own hash chain and external anchoring history.
 
-Traditional audit logs can prove internal consistency, but they cannot prove that the history itself is original. A sufficiently powerful attacker can rewrite past events, recompute all hashes, and present a forged yet internally valid log. Attest addresses this gap by periodically publishing immutable checkpoints of each project’s audit history to an external, append-only system. These checkpoints bind a project’s audit state to an external source of truth, making history rewrites detectable without requiring trust in the service operator.
+Attest is designed to answer a hard question traditional logging systems cannot:
 
-Attest is built for systems where audit integrity matters more than convenience: security-sensitive applications, access control systems, financial or administrative workflows, and any environment where audit logs must remain verifiable long after they are written. It is intentionally API-first and verification-centric, treating audit ingestion, storage, and independent verification as separate concerns.
+> “How do you prove that this audit history is the *original* history?”
+
+### The Problem
+
+Standard audit logs can verify *internal consistency*, but they cannot prove that history itself has not been rewritten.  
+A sufficiently powerful attacker — including a malicious operator with full database access — can modify past events, recompute hashes, and present a forged yet internally valid log.
+
+### The Solution
+
+Attest closes this gap by combining:
+
+1. **Hash chaining** — each event cryptographically links to the previous one  
+2. **External anchoring** — periodic checkpoints of each project’s audit state are published to an external, append-only system (e.g. Git)
+
+These anchors bind the audit history to a source of truth **outside the control of the database operator**, making history rewrites detectable even if the entire database is compromised.
+
+Attest is intentionally **API-first and verification-centric**.  
+Ingestion, storage, and verification are treated as separate concerns so that verification can be performed independently, long after events are written.
+
+---
 
 ## Who This Is For
 
 ### Intended Users
 
-* Developers building security-sensitive or high-assurance systems.
-* Security and compliance teams who require independently verifiable proof that audit history has not been rewritten.
-* Operators who want tamper-evidence without running complex cryptographic infrastructure. 
+- Developers building **security-sensitive or high-assurance systems**
+- Security and compliance teams requiring **independently verifiable audit integrity**
+- Operators who want tamper-evidence **without blockchains or consensus systems**
 
 ### Not Intended Users
 
-* General application logging or analytics.
-* High-volume telemetry or clickstream data.
-* Systems requiring mutable history or “right to be forgotten” semantics.
+- General application logging or analytics
+- High-volume telemetry or clickstream data
+- Systems requiring mutable history or “right-to-be-forgotten” semantics
+
+---
 
 ## Core Concepts
 
-- **Project**: A logical isolation boundary. Each project has its own independent hash chain.
-- **Audit Event**: An immutable record containing a JSON payload. Each event is cryptographically linked to the previous one.
-- **Hash Chaining**: The mechanism where `CurrentHash = SHA256(PreviousHash + SHA256(Payload))`. This ensures that changing any historical event invalidates all subsequent hashes.
-- **Chain Head**: The sequence number and hash of the most recent event in a project.
-- **Anchoring**: The process of periodically publishing the Chain Head to a trusted external system (e.g., an append-only Git repository). This prevents "split-view" attacks where an operator forks the history.
+- **Project**  
+  A tenant isolation boundary. Each project has its own independent hash chain and anchors.
+
+- **Audit Event**  
+  An immutable JSON payload representing an auditable action.
+
+- **Hash Chaining**  
+  ```
+  chainHash = SHA256(prevChainHash + SHA256(payload))
+  ```
+  Any modification to historical data invalidates all subsequent hashes.
+
+- **Chain Head**  
+  The sequence number and hash of the most recent event in a project.
+
+- **Anchoring**  
+  Periodic publication of the Chain Head to an external, append-only system.  
+  This prevents rollback, truncation, and split-view attacks.
+
+---
 
 ## Documentation
+
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Security Model](./docs/SECURITY.md)
 - [Operations](./docs/OPERATIONS.md)
 - [Control Plane & CLI](./docs/CONTROL_PLANE.md)
+- [How to Use Attest](./docs/HOW_TO_USE_ATTEST.md)
 
-## Developer Usage
+---
 
-### 1. Create a Project
-```bash
-# Returns projectId and apiKey
-curl -X POST http://localhost:3000/projects
-```
+## Developer Usage (Data Plane)
 
-### 2. Append an Event
-The project context is derived exclusively from the API key. Client-supplied project identifiers are ignored.
+### Append an Event
+
+Project context is derived **exclusively** from the API key.  
+Client-supplied project identifiers are ignored.
 
 ```bash
 curl -X POST http://localhost:3000/events \
-  -H "x-api-key: <YOUR_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "login",
-    "actor": { "type": "user", "id": "alice" },
-    "resource": { "type": "session", "id": "web" }
-  }'
+-H "x-api-key: <PROJECT_API_KEY>" \
+-H "Content-Type: application/json" \
+-d '{
+  "action": "login",
+  "actor": { "type": "user", "id": "alice" },
+  "resource": { "type": "session", "id": "web" }
+}'
 ```
 
-### 3. Verify History
-In the event of a security incident, you verify the integrity of the log against the external anchor.
+### Verify History
+
+Verification can be performed independently at any time.
 
 ```bash
-# Verifies hash chain integrity AND checks against the latest external anchor
+# Verifies internal hash integrity and checks against external anchors
 npx tsx src/scripts/verify-with-anchor.ts <PROJECT_ID>
 ```
 
-## Summary of Guarantees
+## Guarantees
 
-- **Integrity**: It is computationally infeasible to modify an event without invalidating the hash chain.
-- **Isolation**: Cross-tenant contamination is impossible; each project has a distinct genesis and chain.
-- **Authority**: Write access is strictly controlled via API keys; no client-supplied identity is trusted without authentication.
-- **Tamper-Evidence**: Any attempt to rewrite history (including "correctly" recomputing hashes) is detected if the history has been anchored externally.
+### Integrity
+Any modification to historical events invalidates the hash chain.
+
+### Isolation
+Projects are fully isolated; cross-tenant influence is impossible.
+
+### Authority
+Write access is controlled exclusively via API keys.
+No client-supplied identity is trusted.
+
+### Tamper-Evidence
+History rewrites — including correctly recomputed chains — are detected once anchored externally.
+
+## Non-Goals
+
+Attest intentionally does not provide:
+
+- Blockchain or consensus mechanisms
+- A hosted SaaS or UI dashboard
+- Real-time alerting
+- High-throughput analytics or search
+
+Attest is infrastructure for provable audit integrity, not a general logging platform.

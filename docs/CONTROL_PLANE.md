@@ -2,6 +2,8 @@
 
 Attest provides a **Control Plane** for operators to manage projects and API keys. This is separate from the **Data Plane** used by applications to append events.
 
+In a typical deployment, the "Admin" is the person or team operating the Attest service itself, not the end users of an application.
+
 ## Admin Authentication
 
 The Control Plane is protected by a single high-entropy **Admin Token**.
@@ -93,11 +95,9 @@ Create a new API key.
 Revoke an API key.
 - **Response**: `204 No Content`
 
-The CLI recomputes the entire hash chain locally and verifies it against external anchors. Verification does not rely on trusting the running service.
-
 ## Admin Token Risk
 
-Compromise of the Admin Token grants full Control Plane authority, including project and key management. It does not allow undetectable history rewriting unless the external anchoring system is also compromised. Operators must protect this token with the same rigor as database credentials.
+Compromise of the Admin Token grants full Control Plane authority, including project and key management. It does not allow undetectable history rewriting unless the external anchoring system is also compromised, at which point all trust assumptions are already broken. Operators must protect this token with the same rigor as database credentials.
 
 ## Design Constraints
 
@@ -109,3 +109,8 @@ Attest intentionally excludes the following:
 * Blockchain and consensus protocols.
 
 These constraints keep the trust surface small and auditable.
+
+## Operator Responsibility
+
+The Control Plane is intentionally powerful and minimal. Operators are responsible for protecting the Admin Token, managing anchor credentials, and enforcing operational discipline around verification.
+
