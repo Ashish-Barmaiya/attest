@@ -77,20 +77,26 @@ adminRouter.post("/projects/:projectId/keys", async (req, res) => {
       return res.status(404).json({ error: "Project not found" });
     }
 
+    if (project.tombstonedAt) {
+      return res.status(403).json({ error: "Project is tombstoned" });
+    }
+
     // Generate key
     const key = crypto.randomBytes(32).toString("hex");
+
+    // Hash the key
     const keyHash = crypto.createHash("sha256").update(key).digest("hex");
 
     const apiKey = await prisma.apiKey.create({
       data: {
-        keyHash,
+        keyHash, // Store the hash, not the raw key
         projectId,
         createdAt: BigInt(Date.now()),
       },
     });
 
     res.status(201).json({
-      apiKey: key,
+      apiKey: key, // Return the raw key
       keyId: apiKey.id,
     });
   } catch (err) {
@@ -100,24 +106,73 @@ adminRouter.post("/projects/:projectId/keys", async (req, res) => {
 });
 
 // 4. Revoke API Key
-adminRouter.delete("/keys/:keyHash", async (req, res) => {
-  const { keyHash } = req.params; // This is keyHash
+adminRouter.delete("/keys/:id", async (req, res) => {
+  const { id } = req.params;
 
   try {
+    // We need to find the key first to know the project.
+    const key = await prisma.apiKey.findUnique({ where: { id } });
+    if (!key) return res.status(404).json({ error: "Key not found" });
+
+    // Verify project is not tombstoned
+    const project = await prisma.project.findUnique({
+      where: { id: key.projectId },
+    });
+
+    if (project && project.tombstonedAt) {
+      return res.status(403).json({ error: "Project is tombstoned" });
+    }
+
     await prisma.apiKey.update({
-      where: { keyHash },
+      where: { id },
       data: {
-        revokedAt: BigInt(Date.now()),
+        revokedAt: BigInt(Date.now()), // Mark the key as revoked
       },
     });
 
     res.status(204).send();
   } catch (err) {
-    // If not found
-    // Prisma throws if record not found? No, update throws?
-    // Actually update throws if not found.
     console.error("Failed to revoke key:", err);
-    res.status(404).json({ error: "Key not found" });
+    res.status(500).json({ error: "Failed to revoke key" });
+  }
+});
+
+// 6. Tombstone Project
+adminRouter.post("/projects/:projectId/tombstone", async (req, res) => {
+  const { projectId } = req.params;
+
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    if (project.tombstonedAt) {
+      return res.status(400).json({ error: "Project is already tombstoned" });
+    }
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        tombstonedAt: BigInt(Date.now()), // Mark the project as tombstoned
+      },
+    });
+
+    res.json({
+      message: "Project tombstoned",
+      projectId,
+      tombstonedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("Failed to tombstone project:", err);
+    // @ts-ignore
+    if (err.meta) console.error("Prisma meta:", err.meta);
+    res
+      .status(500)
+      .json({ error: "Failed to tombstone project", details: String(err) });
   }
 });
 
@@ -135,7 +190,6 @@ adminRouter.get("/projects/:projectId/events", async (req, res) => {
     const result = events.map((e) => ({
       ...e,
       createdAt: e.createdAt.toString(),
-      // payloadJson is already a string
     }));
 
     res.json(result);

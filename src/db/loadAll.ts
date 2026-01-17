@@ -1,10 +1,7 @@
 import { prisma } from "./database.js";
 import type { AuditEvent } from "../core/event.js";
 
-/**
- * Shape of a row returned from audit_events.
- * This is a hard contract with the database.
- */
+// Shape of a row returned from audit_events.
 type AuditEventRow = {
   sequence: number;
   payload_json: string;

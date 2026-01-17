@@ -2,9 +2,6 @@ import { prisma } from "../db/database.js";
 import { verifyChain } from "../core/verify.js";
 import { readAnchor } from "../core/anchor-reader.js";
 import { verifyAgainstAnchor } from "../core/verify-anchor.js";
-import fs from "fs";
-
-// const prisma = new PrismaClient(); // Removed
 
 async function main() {
   const projectId = process.argv[2];
@@ -38,8 +35,6 @@ async function main() {
 
   if (events.length === 0) {
     console.log("No events found for project.");
-    // If there's an anchor, this is a failure (unless anchor is for seq 0, which we handled in verifyAgainstAnchor)
-    // But let's see if anchor exists first.
   } else {
     console.log(`Loaded ${events.length} events.`);
   }
@@ -48,9 +43,9 @@ async function main() {
   console.log("Verifying chain integrity...");
   try {
     verifyChain(events);
-    console.log("✅ Chain integrity verified.");
+    console.log("Chain integrity verified.");
   } catch (err) {
-    console.error("❌ Chain integrity verification failed:", err);
+    console.error("Chain integrity verification failed:", err);
     process.exit(1);
   }
 
@@ -65,18 +60,12 @@ async function main() {
     );
 
     verifyAgainstAnchor(events, anchor);
-    console.log("✅ Anchor verification passed.");
+    console.log("Anchor verification passed.");
   } catch (err: any) {
-    // If file not found, we might warn or fail depending on strictness.
-    // Requirement says "Integrate anchoring into verification flow (opt-in)".
-    // If the script is explicitly "verify-with-anchor", missing anchor might be a failure or just a "no anchor found" message.
-    // But `readAnchor` throws if file missing.
-    // Let's assume if we run this script, we EXPECT an anchor.
-
     if (err.message && err.message.includes("Anchor file not found")) {
-      console.warn("⚠️  No anchor file found. Skipping anchor verification.");
+      console.warn("No anchor file found. Skipping anchor verification.");
     } else {
-      console.error("❌ Anchor verification failed:", err.message);
+      console.error("Anchor verification failed:", err.message);
       process.exit(1);
     }
   }

@@ -21,6 +21,29 @@ Attest assumes a "trust but verify" relationship with the service operator, and 
 | **Denial of Service** | Attacker deletes the entire database. | **Out of Scope.** Attest guarantees *tamper-evidence*, not *availability*. Use standard backup/replication strategies. |
 | **Pre-Ingestion Tampering** | The application sends false data to Attest. | **Out of Scope.** "Garbage in, garbage out." Attest proves the data hasn't changed *since* ingestion. |
 
+## Rate Limiting and Audit Integrity
+
+Rate limiting is a security control for availability, but it interacts with integrity:
+
+1.  **Explicit Failure**: When a rate limit is exceeded, Attest returns `HTTP 429`. It **never** partially writes data or silently drops it.
+2.  **No Gaps**: A 429 response means the chain was not touched. There are no "missing" sequence numbers caused by rate limiting.
+3.  **Client Responsibility**: The security guarantee is that *if* Attest confirms a write (HTTP 201), it is permanently in the chain. If Attest rejects a write (HTTP 429), the client must decide whether to retry or halt.
+4.  **Integrity over throughput**: Attest prioritizes correctness and verifiability over ingestion speed. This ensures audit history remains defensible during forensic reviews.
+
+### Trust Model alignment
+
+Rate limiting protects against:
+-   Abuse
+-   Accidental overload
+-   Denial-of-service amplification 
+
+It does not:
+-   Validate client intent
+-   Prevent API key misuse
+-   Guarantee delivery
+
+Those responsibilties remain with the caller.
+
 ## Trust Assumptions
 
 1.  **External Anchor Integrity**: We assume the external anchoring system (e.g., GitHub, S3 Object Lock) is not compromised by the same attacker who compromised the Attest database.

@@ -8,7 +8,7 @@ const PROJECT_ID = "attack-proof-proj";
 const ANCHOR_DIR = path.resolve("attack-anchors");
 
 async function verifyAttack() {
-  console.log("🔍 Verifying Attack Results...");
+  console.log("Verifying Attack Results...");
 
   // 1. Load events
   const prismaEvents = await prisma.auditEvent.findMany({
@@ -27,12 +27,10 @@ async function verifyAttack() {
   console.log("Step 1: Internal Chain Verification");
   try {
     verifyChain(events);
-    console.log(
-      "✅ PASS: Internal chain is valid (Attack successful locally)."
-    );
+    console.log("PASS: Internal chain is valid (Attack successful locally).");
   } catch (err) {
     console.error(
-      "❌ FAIL: Internal chain is broken. Attack script failed to rewrite correctly."
+      "FAIL: Internal chain is broken. Attack script failed to rewrite correctly."
     );
     console.error(err);
     process.exit(1);
@@ -46,17 +44,15 @@ async function verifyAttack() {
 
     verifyAgainstAnchor(events, anchor);
 
-    console.error(
-      "❌ FAIL: Anchor verification passed! Attack was NOT detected."
-    );
+    console.error("FAIL: Anchor verification passed! Attack was NOT detected.");
     process.exit(1);
   } catch (err: any) {
     if (err.message.includes("Chain hash mismatch")) {
-      console.log("✅ PASS: Anchor verification failed as expected.");
+      console.log("PASS: Anchor verification failed as expected.");
       console.log(`   Reason: ${err.message}`);
     } else {
       console.log(
-        "❓ PASS? Anchor verification failed, but maybe for wrong reason?"
+        "PASS? Anchor verification failed, but maybe for wrong reason?"
       );
       console.log(`   Error: ${err.message}`);
     }

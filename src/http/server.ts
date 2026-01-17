@@ -12,7 +12,7 @@ const app = express();
 
 app.use(express.json({ limit: "100kb" }));
 
-// Public health check (optional, but good practice)
+// Public health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
@@ -25,7 +25,16 @@ app.use("/admin", requireAdmin, adminRouter);
 
 app.use(requireAuth);
 
-app.post("/events", async (req, res) => {
+import {
+  globalRateLimit,
+  projectRateLimit,
+  keyRateLimit,
+} from "./rate-limit.js";
+
+app.use(globalRateLimit);
+app.use(requireAuth);
+
+app.post("/events", projectRateLimit, keyRateLimit, async (req, res) => {
   const parsed = IngestEventSchema.safeParse(req.body);
 
   if (!parsed.success) {
@@ -39,6 +48,18 @@ app.post("/events", async (req, res) => {
   const projectId = getProjectContext(req);
 
   try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: "Unknown project" });
+    }
+
+    if (project.tombstonedAt) {
+      return res.status(403).json({ error: "Project is tombstoned" });
+    }
+
     const event = await appendEventPersistent(projectId, parsed.data);
 
     res.status(201).json({
@@ -48,8 +69,6 @@ app.post("/events", async (req, res) => {
   } catch (err) {
     console.error(err);
     if (err instanceof Error && err.message === "Unknown project") {
-      // This should theoretically not happen if auth is correct,
-      // but good for safety if DB state is inconsistent
       return res.status(404).json({ error: "Unknown project" });
     }
     res.status(500).json({ error: "Failed to append event" });

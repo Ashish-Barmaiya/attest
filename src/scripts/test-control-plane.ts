@@ -134,6 +134,10 @@ async function runTests() {
       401,
       "Should fail to append with revoked key"
     );
+
+    /*
+     * Key rotation and Project Tombstone tests are handled in test-lifecycle.ts
+     */
   } finally {
     server.close();
     await prisma.$disconnect();

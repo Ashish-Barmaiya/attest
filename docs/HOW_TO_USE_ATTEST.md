@@ -179,6 +179,33 @@ attest key revoke <keyId>
 ```
 Revocation prevents future writes but preserves history.
 
+### Key Rotation Procedure
+Rotation is a manual, staged process to prevent downtime.
+
+1.  **Generate New Key**:
+    ```bash
+    attest key rotate <projectId>
+    ```
+2.  **Deploy New Key**: Update your application configuration.
+3.  **Verify**: Ensure the application is successfully appending events with the new key.
+4.  **Revoke Old Key**:
+    ```bash
+    attest key revoke <oldKeyId>
+    ```
+
+### Project Decommissioning
+To safely decommission a project without destroying audit evidence:
+
+```bash
+attest project tombstone <projectId> --confirm
+```
+
+This ensures:
+*   No new events can be written.
+*   No new keys can be created.
+*   Existing history remains verifiable forever.
+*   Anchors remain valid.
+
 ## 8. Integrating Attest into Your Application
 
 ### Application Environment Variables
@@ -219,6 +246,22 @@ Attest responds with:
 }
 ```
 Your application does not need to store this response.
+
+### Handling Rate Limits (HTTP 429)
+Attest enforces rate limits to ensure stability. If you send too many requests, you will receive a `429 Too Many Requests` response.
+
+**What This Means**
+-   The event was **not** written.
+-   The audit chain remains unchanged.
+-   No partial or corrupted state exists.
+
+**Recommended Client Behaviour:**
+1.  **Log the failure**: Ensure your application logs that the audit event failed.
+2.  **Retry with Backoff**: Use an exponential backoff strategy to retry the request.
+3.  **Batch Events**: If you are hitting limits frequently, group related actions into a single event payload.
+
+> [!IMPORTANT]
+> Attest does **not** queue events internally. If you get a 429, the event was **not** written. You must handle the retry logic.
 
 ## 9. Anchoring (Operator Responsibility)
 Anchoring should run periodically.

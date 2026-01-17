@@ -17,9 +17,9 @@ async function createApiKey(projectId: string) {
     },
   });
 
-  console.log(`\n✅ API Key created for project: ${projectId}`);
-  console.log(`🔑 Key: ${key}`);
-  console.log(`⚠️  Store this key safely. It will NOT be shown again.\n`);
+  console.log(`\nAPI Key created for project: ${projectId}`);
+  console.log(`Key: ${key}`);
+  console.log(`Store this key safely. It will NOT be shown again.\n`);
 }
 
 const projectId = process.argv[2];

@@ -75,3 +75,35 @@ We validated this design against a "Strong Attacker" model. The attacker:
 -   **Anchor Verification**: FAILED. The recomputed chain hash at the anchor point did not match the hash stored in the external anchor file.
 
 **Conclusion**: To successfully rewrite history, an attacker must compromise **both** the Attest database and the external anchoring system (e.g., rewrite Git history) simultaneously.
+
+## Concurrency, Throughput, and Integrity Tradeoffs
+
+### Serialization
+Attest enforces strict serialization of writes per project. This is a deliberate design choice, not a limitation.
+-   **Why**: To guarantee a linear, verifiable hash chain (`prevChainHash` -> `chainHash`), every event must cryptographically depend on the immediately preceding event.
+-   **Tradeoff**: Parallel writes are impossible within a single project. Throughput is limited by the latency of a single database round-trip.
+
+### Throughput Scaling
+-   **Horizontal Scaling**: Throughput scales linearly with the number of *projects*. Since projects are isolated, they do not contend for the same lock.
+-   **Batching**: To increase throughput within a single project, clients should batch multiple logical actions into a single Attest event payload, or use an upstream queue to buffer bursts.
+-   **Queues**: Attest does not use internal queues (Kafka, RabbitMQ) for ingestion. Queues hide failures and make "at-most-once" vs "at-least-once" guarantees ambiguous. Attest provides **synchronous, explicit confirmation**: if you get a 201, it is written. If you get a 429 or 500, it is not.
+
+### Rate Limiting
+Rate limiting exists to protect availability, not integrity.
+
+Attest enforces rate limits at multiple layers to prevent abuse, runaway clients, and accidental overload, while preserving the cryptographic guarantees of the audit log.
+
+#### Design Principles
+
+-   **Availability over throughput**: Rejecting a request (429) preserves the integrity of the chain. Accepting a request and failing to write it (partial failure) would compromise it.
+-   **Integrity is never compromised**: Attest never partially writes events. A request is either:
+    -   fully accepted and cryptographically committed, or
+    -   rejected before any mutation occurs.
+-   **Explicit failure model**: Rate limit exhaustion returns an immediate HTTP 429. The client is responsible for retrying or failing safe. Attest never silently drops events.
+
+#### Why Rate Limiting is Safe for Audit Logs
+-   **Immutability**: Only successfully accepted requests affect the hash chain.
+-   **No gaps**: Rejected requests do not create missing sequence numbers.
+-   **Deterministic behavior**: Every accepted event is permanently verifiable.
+
+Rate limiting may reduce *throughput*, but it never weakens *integrity*.

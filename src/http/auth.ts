@@ -7,6 +7,7 @@ declare global {
   namespace Express {
     interface Request {
       projectId?: string;
+      keyId?: string;
     }
   }
 }
@@ -18,20 +19,14 @@ export async function requireAuth(
 ) {
   const apiKey = req.header("x-api-key");
 
-  // Constant-time-ish strategy:
-  // Always do:
-  // 1. Validation check (fast fail, but we want to simulate work if possible?
-  //    Actually requirements say "Always perform... DB lookup".
-  //    So if missing/malformed, we hash a dummy.)
-
+  // Always do validation check (fast fail, but simulate work if possible)
   let keyToHash = apiKey;
   let isValidFormat = true;
 
   // 1. Validate format (64 hex chars)
-  // We check this, but we DON'T return yet. We set a flag.
   if (!apiKey || typeof apiKey !== "string" || !/^[0-9a-f]{64}$/.test(apiKey)) {
     isValidFormat = false;
-    // Use a dummy key for hashing to ensure we still do the work
+    // Use a dummy key for hashing to ensure work is still being done
     keyToHash =
       "0000000000000000000000000000000000000000000000000000000000000000";
   }
@@ -42,13 +37,12 @@ export async function requireAuth(
 
   try {
     // 3. DB Lookup
-    // Always happens
     const keyRecord = await prisma.apiKey.findUnique({
       where: { keyHash },
     });
 
     // 4. Final Decision
-    // We fail if:
+    // Fail if:
     // - Format was invalid (isValidFormat === false)
     // - Record not found (!keyRecord)
     // - Key is revoked (keyRecord.revokedAt)
@@ -61,7 +55,7 @@ export async function requireAuth(
 
     // Attach project context
     req.projectId = keyRecord.projectId;
-    next();
+    (req as any).keyId = keyRecord.id;
   } catch (err) {
     console.error("Auth error:", err);
     // Fail closed, ambiguously
@@ -86,32 +80,19 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(500).json({ error: "Server configuration error" });
   }
 
-  // Constant-time comparison
   let isValid = true;
   let tokenToCompare = token || "";
-
-  // If token is missing or wrong length, we still compare against something to simulate work?
-  // Actually, for a simple token check, just ensuring we compare both is usually enough.
-  // But strictly speaking, we want to avoid timing attacks on length.
-  // However, for this task, a simple constant-time string compare is sufficient if lengths match.
-  // If lengths mismatch, it's obviously wrong, but we should still try to take constant time.
 
   if (!token || typeof token !== "string") {
     isValid = false;
     tokenToCompare = "invalid-token-placeholder";
   }
 
-  // Use crypto.timingSafeEqual
-  // It requires buffers of equal length.
   const bufferA = Buffer.from(tokenToCompare);
   const bufferB = Buffer.from(adminToken);
 
   if (bufferA.length !== bufferB.length) {
     isValid = false;
-    // To avoid timing leak on length, we could compare bufferB against itself or something,
-    // but usually length leak is considered acceptable for tokens or hard to avoid completely without padding.
-    // Let's just fail. The requirement says "Use constant-time comparison".
-    // If lengths differ, timingSafeEqual throws.
   } else {
     if (!crypto.timingSafeEqual(bufferA, bufferB)) {
       isValid = false;

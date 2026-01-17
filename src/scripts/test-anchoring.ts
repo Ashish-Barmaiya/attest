@@ -5,8 +5,6 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { hash, canonicalize } from "../core/hash.js";
 
-// const prisma = new PrismaClient(); // Removed
-
 const ANCHOR_DIR = path.resolve("temp-anchors");
 
 // Ensure anchor dir exists
@@ -14,7 +12,6 @@ if (!fs.existsSync(ANCHOR_DIR)) {
   fs.mkdirSync(ANCHOR_DIR);
 }
 
-// Set env var for child processes
 process.env.ANCHOR_DIR = ANCHOR_DIR;
 
 async function runCommand(cmd: string) {
@@ -84,7 +81,7 @@ async function addEvent(
 }
 
 async function testAnchoring() {
-  console.log("🛡️  Starting Adversarial Anchoring Tests...\n");
+  console.log("Starting Adversarial Anchoring Tests...\n");
 
   const projectId = `test-anchor-${randomUUID()}`;
   console.log(`Creating project ${projectId}...`);
@@ -116,9 +113,9 @@ async function testAnchoring() {
     `npx tsx src/scripts/verify-with-anchor.ts ${projectId}`
   );
   if (verifyRes1.success) {
-    console.log("✅ Passed");
+    console.log("Passed");
   } else {
-    console.error("❌ Failed (Unexpected):", verifyRes1.output);
+    console.error("Failed (Unexpected):", verifyRes1.output);
     process.exit(1);
   }
 
@@ -129,9 +126,9 @@ async function testAnchoring() {
     `npx tsx src/scripts/verify-with-anchor.ts ${projectId}`
   );
   if (verifyRes2.success) {
-    console.log("✅ Passed");
+    console.log("Passed");
   } else {
-    console.error("❌ Failed (Unexpected):", verifyRes2.output);
+    console.error("Failed (Unexpected):", verifyRes2.output);
     process.exit(1);
   }
 
@@ -139,10 +136,10 @@ async function testAnchoring() {
   console.log(
     "Test 3: DB Rollback (delete event 6) -> SHOULD FAIL (if anchor was at 6, but anchor is at 5)"
   );
-  // Wait, anchor is at 5. If we delete 6, we are back to 5. This is actually VALID with respect to anchor at 5.
-  // To test rollback failure, we need to anchor at 6, then delete 6.
+  // Anchor is at 5. If it deletes 6, it is back to 5. This is actually VALID with respect to anchor at 5.
+  // To test rollback failure, anchor needs to be at 6, then delete 6.
 
-  // Let's update anchor to 6
+  // Update anchor to 6
   await runCommand("npx tsx src/scripts/anchor-writer.ts");
 
   // Now delete 6
@@ -167,15 +164,11 @@ async function testAnchoring() {
       "History ends at sequence 5, but anchor requires 6"
     )
   ) {
-    console.log("✅ Passed (Detected rollback)");
+    console.log("Passed (Detected rollback)");
   } else {
-    console.error("❌ Failed (Undetected or wrong error):", verifyRes3.output);
+    console.error("Failed (Undetected or wrong error):", verifyRes3.output);
     process.exit(1);
   }
-
-  // Restore 6 for next tests? No, let's start fresh or fix it.
-  // Let's fix it by "restoring" 6 (re-inserting it)
-  // Actually, let's just create a new project for each attack to be clean.
 
   // 6. Attack: Tamper before anchor
   console.log("Test 4: Payload tampering before anchor -> SHOULD FAIL");
@@ -198,9 +191,9 @@ async function testAnchoring() {
     !verifyRes4.success &&
     verifyRes4.output.includes("Payload hash mismatch")
   ) {
-    console.log("✅ Passed (Detected tampering via chain verify)");
+    console.log("Passed (Detected tampering via chain verify)");
   } else {
-    console.error("❌ Failed (Undetected):", verifyRes4.output);
+    console.error("Failed (Undetected):", verifyRes4.output);
     process.exit(1);
   }
 
@@ -213,7 +206,7 @@ async function testAnchoring() {
   await runCommand("npx tsx src/scripts/anchor-writer.ts"); // Anchor at 3
 
   // Rewrite event 3 completely (valid hash, but different content -> different chain hash)
-  // We need to delete 3 and insert a new 3
+  // Need to delete 3 and insert a new 3
   await prisma.auditEvent.delete({
     where: { projectId_sequence: { projectId: p3, sequence: 3 } },
   });
@@ -253,9 +246,9 @@ async function testAnchoring() {
     !verifyRes5.success &&
     verifyRes5.output.includes("Chain hash mismatch at sequence 3")
   ) {
-    console.log("✅ Passed (Detected fork vs anchor)");
+    console.log("Passed (Detected fork vs anchor)");
   } else {
-    console.error("❌ Failed (Undetected):", verifyRes5.output);
+    console.error("Failed (Undetected):", verifyRes5.output);
     process.exit(1);
   }
 
@@ -278,13 +271,13 @@ async function testAnchoring() {
     (verifyRes6.output.includes("History is empty") ||
       verifyRes6.output.includes("Missing event"))
   ) {
-    console.log("✅ Passed (Detected truncation)");
+    console.log("Passed (Detected truncation)");
   } else {
-    console.error("❌ Failed (Undetected):", verifyRes6.output);
+    console.error("Failed (Undetected):", verifyRes6.output);
     process.exit(1);
   }
 
-  console.log("\n🎉 All adversarial tests passed!");
+  console.log("\nAll adversarial tests passed!");
 
   // Cleanup
   fs.rmSync(ANCHOR_DIR, { recursive: true, force: true });

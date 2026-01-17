@@ -52,6 +52,12 @@ attest project create <name>
 attest project list
 ```
 
+**Tombstone a Project**
+```bash
+attest project tombstone <projectId> --confirm
+```
+*Permanently closes the project. No further writes are allowed. This action is irreversible.*
+
 #### Manage API Keys
 
 **Create an API Key**
@@ -59,6 +65,12 @@ attest project list
 attest key create <projectId>
 ```
 *Returns the raw API key once. Store it safely.*
+
+**Rotate an API Key**
+```bash
+attest key rotate <projectId>
+```
+*Creates a new key without revoking the old one. Allows for staged migration.*
 
 **Revoke an API Key**
 ```bash
@@ -93,7 +105,13 @@ Create a new API key.
 
 ### `DELETE /admin/keys/:keyId`
 Revoke an API key.
+### `DELETE /admin/keys/:keyId`
+Revoke an API key.
 - **Response**: `204 No Content`
+
+### `POST /admin/projects/:projectId/tombstone`
+Permanently close a project.
+- **Response**: `{ "message": "Project tombstoned", "tombstonedAt": "..." }`
 
 ## Admin Token Risk
 

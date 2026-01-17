@@ -4,7 +4,7 @@ import { hash, canonicalize } from "../core/hash.js";
 const PROJECT_ID = "attack-proof-proj";
 
 async function attack() {
-  console.log("😈 Starting Attack Simulation...");
+  console.log("Starting Attack Simulation...");
 
   // 1. Load all events
   const events = await prisma.auditEvent.findMany({
@@ -38,7 +38,7 @@ async function attack() {
   // 3. Recompute Chain
   let prevChainHash = targetEvent.prevChainHash; // Start from 3's prev
 
-  // We need to update events starting from targetIndex
+  // Need to update events starting from targetIndex
   const updates = [];
 
   for (let i = targetIndex; i < events.length; i++) {
@@ -101,7 +101,7 @@ async function attack() {
     });
   });
 
-  console.log("✅ Attack complete. History rewritten.");
+  console.log("Attack complete. History rewritten.");
 }
 
 attack()

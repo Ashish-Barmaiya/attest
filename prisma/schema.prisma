@@ -8,9 +8,10 @@ datasource db {
 }
 
 model project {
-  id        String @id
-  name      String
-  createdAt BigInt
+  id           String  @id
+  name         String
+  createdAt    BigInt
+  tombstonedAt BigInt?
 
   @@map("projects")
 }

@@ -1,7 +1,6 @@
 import { prisma } from "./database.js";
 
 export async function initDb() {
-  // Ensure the Genesis block exists
   const genesis = await prisma.chainHead.findUnique({
     where: { projectId: "1" },
   });

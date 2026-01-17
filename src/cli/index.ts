@@ -3,8 +3,6 @@ import "dotenv/config";
 import { verifyChain } from "../core/verify.js";
 import { readAnchor } from "../core/anchor-reader.js";
 import { verifyAgainstAnchor } from "../core/verify-anchor.js";
-import fs from "fs";
-import path from "path";
 
 const ADMIN_TOKEN = process.env.ATTEST_ADMIN_TOKEN;
 const API_URL = process.env.ATTEST_API_URL || "http://localhost:3000";
@@ -59,6 +57,25 @@ async function main() {
         } else if (subcommand === "list") {
           const projects = await request("/projects");
           console.log(JSON.stringify(projects, null, 2));
+        } else if (subcommand === "tombstone") {
+          const projectId = args[2];
+          const confirmFlag = args[3];
+          if (!projectId) throw new Error("Project ID is required");
+
+          if (confirmFlag !== "--confirm") {
+            console.warn(
+              "WARNING: This action is irreversible. The project will be permanently closed."
+            );
+            console.warn(
+              `To proceed, run: attest project tombstone ${projectId} --confirm`
+            );
+            process.exit(1);
+          }
+
+          const result = await request(`/projects/${projectId}/tombstone`, {
+            method: "POST",
+          });
+          console.log(JSON.stringify(result, null, 2));
         } else {
           printHelp();
         }
@@ -72,6 +89,19 @@ async function main() {
             method: "POST",
           });
           console.log(JSON.stringify(key, null, 2));
+        } else if (subcommand === "rotate") {
+          const projectId = args[2];
+          if (!projectId) throw new Error("Project ID is required");
+
+          const key = await request(`/projects/${projectId}/keys`, {
+            method: "POST",
+          });
+
+          const output = {
+            ...key,
+            note: "Deploy this key before revoking old keys",
+          };
+          console.log(JSON.stringify(output, null, 2));
         } else if (subcommand === "revoke") {
           const keyId = args[2];
           if (!keyId) throw new Error("Key ID is required");
@@ -159,7 +189,9 @@ Usage: attest <command> <subcommand> [args]
 Commands:
   project create <name>
   project list
+  project tombstone <projectId> [--confirm]
   key create <projectId>
+  key rotate <projectId>
   key revoke <keyId>
   verify <projectId> --anchors <path>
 `);

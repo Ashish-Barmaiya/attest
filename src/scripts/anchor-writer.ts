@@ -2,8 +2,6 @@ import { prisma } from "../db/database.js";
 import fs from "fs";
 import path from "path";
 
-// const prisma = new PrismaClient(); // Removed
-
 async function main() {
   const anchorDir = process.env.ANCHOR_DIR;
   if (!anchorDir) {

@@ -39,3 +39,26 @@ Attest provides tamper-evidence, not automatic enforcement. Operators are respon
 - Preserving anchor history
 - Performing verification during audits or incidents
 
+## Rate Limiting Configuration
+
+Attest uses a multi-layered rate limiting strategy to protect availability.
+
+### Default Limits
+If environment variables are not set, Attest defaults to:
+-   **Global**: 100 RPS (`ATTEST_GLOBAL_RPS`)
+-   **Per-Project**: 10 RPS (`ATTEST_PROJECT_RPS`)
+-   **Per-Key**: 5 RPS (`ATTEST_KEY_RPS`)
+
+### Tuning Guidance
+-   **Small Teams**: Defaults are usually sufficient.
+-   **Large Organizations**: Increase `ATTEST_GLOBAL_RPS` based on the number of active projects.
+-   **High-Volume Projects**: If a project requires >10 RPS, consider:
+    1.  Batching multiple actions into one event.
+    2.  Increasing `ATTEST_PROJECT_RPS` (at the cost of higher DB contention).
+    3.  Use Redis or another shared store.
+
+> [!WARNING]
+> **Do not disable rate limits entirely.**
+> Unbounded writes can degrade the performance of the anchoring worker and verification processes.
+
+
