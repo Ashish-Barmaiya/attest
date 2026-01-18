@@ -3,6 +3,9 @@ import "dotenv/config";
 import { verifyChain } from "../core/verify.js";
 import { readAnchor } from "../core/anchor-reader.js";
 import { verifyAgainstAnchor } from "../core/verify-anchor.js";
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
 
 const ADMIN_TOKEN = process.env.ATTEST_ADMIN_TOKEN;
 const API_URL = process.env.ATTEST_API_URL || "http://localhost:3000";
@@ -126,19 +129,6 @@ async function main() {
 
       case "verify":
         const projectId = args[1];
-        // Support optional --anchors flag, but it's not strictly required if we just want internal verification?
-        // Requirement says "Unified Verification Command".
-        // "Load latest anchor" -> implies we need to know WHERE anchors are.
-        // So --anchors is still needed unless we fetch it from somewhere else?
-        // The requirement says: "attest verify <projectId>"
-        // It doesn't mention --anchors flag in the requirement example "attest verify <projectId>".
-        // BUT, the anchor is external. The CLI needs to know where it is.
-        // Unless... the CLI fetches the anchor from the remote git repo directly?
-        // "Load latest anchor" -> "Verify anchor hash".
-        // If the user runs this locally, they might have the anchor repo cloned.
-        // Let's keep --anchors flag for now as it's the safest way to find the file.
-        // Or maybe we can default to ANCHOR_DIR env var?
-
         const anchorFlagIndex = args.indexOf("--anchors");
         const anchorPath =
           anchorFlagIndex !== -1
@@ -218,7 +208,12 @@ async function verifyProject(projectId: string, anchorDir: string | undefined) {
     process.stdout.write("Verifying against anchor... ");
     try {
       const anchor = readAnchor(projectId, anchorDir);
-      verifyAgainstAnchor(events, anchor);
+
+      // Verify the anchor chain history
+      verifyAnchorChain(anchorDir);
+
+      // Verify the events against the latest anchor
+      verifyAgainstAnchor(events, anchor, undefined);
       console.log(
         `✔ Anchor verified (${new Date(anchor.anchoredAt).toISOString()})`
       );
@@ -257,6 +252,85 @@ Commands:
   anchor logs [limit]
   verify <projectId> [--anchors <path>]
 `);
+}
+
+function verifyAnchorChain(anchorDir: string | undefined) {
+  if (!anchorDir) {
+    console.warn("No anchor directory provided. Skipping chain verification.");
+    return;
+  }
+  if (!fs.existsSync(path.join(anchorDir, ".git"))) {
+    console.warn(
+      "Anchor directory is not a git repository. Skipping chain verification."
+    );
+    return;
+  }
+
+  console.log("Verifying anchor commit chain...");
+
+  // Get all anchor files sorted by time (descending)
+  const files = fs
+    .readdirSync(anchorDir)
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .reverse();
+
+  if (files.length === 0) return;
+
+  // Verify the latest anchor's claim about its previous commit.
+
+  const latestFile = files[0]!;
+  const latestPath = path.join(anchorDir, latestFile);
+  const latestContent = JSON.parse(fs.readFileSync(latestPath, "utf-8"));
+
+  const declaredPrevCommit = latestContent.previousAnchorCommit;
+
+  if (!declaredPrevCommit) {
+    if (files.length > 1) {
+      console.warn(
+        `Warning: Latest anchor ${latestFile} has no previousAnchorCommit, but multiple anchors exist.`
+      );
+    }
+    return;
+  }
+
+  // Check if `declaredPrevCommit` exists in git.
+  try {
+    execSync(`git cat-file -e ${declaredPrevCommit}`, {
+      cwd: anchorDir,
+      stdio: "ignore",
+    });
+  } catch (e) {
+    throw new Error(
+      `Anchor chain broken: previousAnchorCommit ${declaredPrevCommit} not found in git history.`
+    );
+  }
+
+  // Verify that the commit which introduced the latest anchor has declaredPrevCommit as a parent/ancestor
+  // The commit of the latest anchor is:
+  const latestCommit = execSync(`git log -n 1 --format=%H -- ${latestFile}`, {
+    cwd: anchorDir,
+    encoding: "utf-8",
+  }).trim();
+
+  if (!latestCommit) {
+    console.warn(`Warning: Latest anchor ${latestFile} is not committed yet.`);
+    return;
+  }
+
+  // Check if declaredPrevCommit is reachable from latestCommit
+  try {
+    execSync(
+      `git merge-base --is-ancestor ${declaredPrevCommit} ${latestCommit}`,
+      { cwd: anchorDir }
+    );
+  } catch (e) {
+    throw new Error(
+      `Anchor chain broken: ${declaredPrevCommit} is not an ancestor of ${latestCommit}`
+    );
+  }
+
+  console.log("✔ Anchor chain verified (Git history matches)");
 }
 
 main();

@@ -103,15 +103,22 @@ List all projects.
 Create a new API key.
 - **Response**: `{ "apiKey": "...", "keyId": "..." }`
 
+### `POST /admin/projects/:projectId/keys` (Rotate)
+Rotate an API key (same endpoint as create).
+- **Response**: `{ "apiKey": "...", "keyId": "..." }`
+
 ### `DELETE /admin/keys/:keyId`
 Revoke an API key.
-### `DELETE /admin/keys/:keyId`
-Revoke an API key.
-- **Response**: `204 No Content`
+
 
 ### `POST /admin/projects/:projectId/tombstone`
 Permanently close a project.
 - **Response**: `{ "message": "Project tombstoned", "tombstonedAt": "..." }`
+
+### `GET /verify`
+Verify the integrity of the audit chain for a project.
+- **Headers**: `Authorization: Bearer <API_KEY>`
+- **Response**: `{ "projectId": "...", "eventCount": 123, "isValid": true }`
 
 ## Admin Token Risk
 

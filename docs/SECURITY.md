@@ -21,6 +21,12 @@ Attest assumes a "trust but verify" relationship with the service operator, and 
 | **Denial of Service** | Attacker deletes the entire database. | **Out of Scope.** Attest guarantees *tamper-evidence*, not *availability*. Use standard backup/replication strategies. |
 | **Pre-Ingestion Tampering** | The application sends false data to Attest. | **Out of Scope.** "Garbage in, garbage out." Attest proves the data hasn't changed *since* ingestion. |
 
+### Anchor Integrity
+Anchors are protected against:
+- **Silent Deletion/Rewriting**: Each anchor references the previous anchor's commit hash. Verification checks that the anchor file's declared previous commit matches the actual Git history.
+- **Time Spoofing**: Anchors are bound to Git commits, which provide a rough timestamp.
+- **Execution Consistency**: Anchor runs are logged in the database and cross-referenced during verification.
+
 ### Anchor Compromise Model
 If an attacker gains access to the **Anchor Writer credentials** (e.g., SSH keys for the Git repo):
 -   **Risk**: They can publish a valid anchor for a *forked* history.

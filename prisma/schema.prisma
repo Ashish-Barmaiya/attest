@@ -60,14 +60,16 @@ model ApiKey {
  * Execution history of the anchoring process.
  */
 model AnchorRun {
-  id           String    @id @default(uuid())
-  startedAt    DateTime
-  finishedAt   DateTime?
-  status       String // "running", "success", "failed"
-  projectCount Int?
-  anchorFile   String?
-  error        String?
-  gitCommit    String?
+  id                   String    @id @default(uuid())
+  startedAt            DateTime
+  finishedAt           DateTime?
+  status               String // "running", "success", "failed"
+  projectCount         Int?
+  anchorFile           String?
+  gitCommit            String? // Legacy field, keeping for now or can be replaced by anchorCommit
+  anchorCommit         String?
+  previousAnchorCommit String?
+  error                String?
 
   @@map("anchor_runs")
 }

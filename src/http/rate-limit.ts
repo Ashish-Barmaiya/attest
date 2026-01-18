@@ -12,7 +12,7 @@ interface RateLimitState {
 }
 
 // Simple in-memory store for rate limiting
-// In a real distributed system, this would be Redis
+// In a distributed system, this should be Redis
 const globalStore: RateLimitState = { tokens: 0, lastRefill: 0 };
 const projectStore: Map<string, RateLimitState> = new Map();
 const keyStore: Map<string, RateLimitState> = new Map();

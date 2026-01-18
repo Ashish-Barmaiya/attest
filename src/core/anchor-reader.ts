@@ -6,6 +6,8 @@ export interface AnchorPayload {
   lastSequence: number;
   lastChainHash: string;
   anchoredAt: number;
+  anchorCommit: string | null;
+  previousAnchorCommit: string | null;
 }
 
 export function readAnchor(
@@ -67,5 +69,7 @@ export function readAnchor(
     lastSequence: projectAnchor.lastSequence,
     lastChainHash: projectAnchor.lastChainHash,
     anchoredAt: new Date(payload.timestamp).getTime(),
+    anchorCommit: payload.anchorCommit || null,
+    previousAnchorCommit: payload.previousAnchorCommit || null,
   };
 }

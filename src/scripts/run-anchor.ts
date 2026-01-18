@@ -30,7 +30,19 @@ async function runAnchor() {
     },
   });
 
+  let previousAnchorCommit: string | null = null;
   try {
+    // Try to get the current HEAD commit hash
+    try {
+      previousAnchorCommit = execSync("git rev-parse HEAD", {
+        cwd: ANCHOR_DIR,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"], // Ignore stderr to avoid noise if no commits yet
+      }).trim();
+    } catch (e) {
+      // It's possible there are no commits yet (empty repo)
+      console.log("No previous commit found (repository might be empty).");
+    }
     // 2. Load all chain heads
     const heads = await prisma.chainHead.findMany();
     console.log(`Found ${heads.length} projects to anchor.`);
@@ -57,6 +69,8 @@ async function runAnchor() {
 
     const anchorData = {
       timestamp,
+      anchorCommit: null, // Placeholder, actual commit hash is generated after this file is committed
+      previousAnchorCommit,
       anchors: heads.map((h) => ({
         projectId: h.projectId,
         lastSequence: h.lastSequence,
@@ -117,6 +131,8 @@ async function runAnchor() {
         projectCount: heads.length,
         anchorFile: filename,
         gitCommit: commitHash,
+        anchorCommit: commitHash,
+        previousAnchorCommit: previousAnchorCommit,
       },
     });
 
@@ -133,10 +149,9 @@ async function runAnchor() {
         error: err.message,
       },
     });
-
-    process.exit(1);
   } finally {
     await prisma.$disconnect();
+    process.exit(1);
   }
 }
 

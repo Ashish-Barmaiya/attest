@@ -1,0 +1,1 @@
+# 0 * * * * cd /path/to/attest && npm run anchor >> /var/log/attest-anchor.log 2>&1

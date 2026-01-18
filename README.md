@@ -1,8 +1,3 @@
-<p align="center">
-  <img src="assets/logo-dark.svg#gh-dark-mode-only" width="120" />
-  <img src="assets/logo-light.svg#gh-light-mode-only" width="120" />
-</p>
-
 <h1 align="center">Attest — Tamper-Evident Audit Service</h1>
 
 <p align="center">
@@ -134,7 +129,7 @@ Verification can be performed independently at any time.
 
 ```bash
 # Verifies internal hash integrity and checks against external anchors
-npx tsx src/scripts/verify-with-anchor.ts <PROJECT_ID>
+attest verify <PROJECT_ID> --anchors /path/to/anchors
 ```
 
 ## Guarantees

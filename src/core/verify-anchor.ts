@@ -3,13 +3,14 @@ import type { AnchorPayload } from "./anchor-reader.js";
 
 export function verifyAgainstAnchor(
   events: readonly AuditEvent[],
-  anchor: AnchorPayload
+  anchor: AnchorPayload,
+  previousAnchorCommit?: string | null
 ): void {
   // 1. Check if history covers the anchor sequence
 
   if (events.length === 0) {
     if (anchor.lastSequence === 0) {
-      // If anchor exists, we expect events.
+      // If anchor exists, events are expected.
       throw new Error(
         `Verification failed: History is empty but anchor exists at sequence ${anchor.lastSequence}`
       );
@@ -42,7 +43,7 @@ export function verifyAgainstAnchor(
     );
   }
 
-  // 2. Verify chain hash at anchor sequence matches
+  // 3. Verify chain hash at anchor sequence matches
   if (anchorEvent.chainHash !== anchor.lastChainHash) {
     throw new Error(
       `Verification failed: Chain hash mismatch at sequence ${anchor.lastSequence}. ` +
@@ -50,6 +51,16 @@ export function verifyAgainstAnchor(
     );
   }
 
-  // 3. Allows history that extends beyond the anchor
-  // (Implicitly allowed since we only check that we HAVE the anchor event and it matches)
+  // 4. Verify Anchor Chaining
+  // This checks if the anchor file itself claims to be chained to a specific previous commit.
+  // The caller is responsible for verifying that `previousAnchorCommit` (from the previous anchor file or git history) matches `anchor.previousAnchorCommit`.
+  if (previousAnchorCommit !== undefined) {
+    // If we expect a specific previous commit (e.g. from the previous anchor in the chain), verify it.
+    if (anchor.previousAnchorCommit !== previousAnchorCommit) {
+      throw new Error(
+        `Verification failed: Anchor chaining mismatch. ` +
+          `Anchor claims previous commit was ${anchor.previousAnchorCommit}, but expected ${previousAnchorCommit}`
+      );
+    }
+  }
 }

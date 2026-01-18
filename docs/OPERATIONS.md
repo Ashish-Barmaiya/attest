@@ -47,8 +47,13 @@ Anchoring must be triggered externally via system cron. It does not run inside t
 
 Example `crontab` entry (runs every hour):
 ```bash
+# See scripts/attest-anchor.cron for the template
 0 * * * * cd /path/to/attest && npm run anchor >> /var/log/attest-anchor.log 2>&1
 ```
+
+> [!IMPORTANT]
+> The `scripts/attest-anchor.cron` file is provided as a template. You must uncomment the line in the file (or your crontab) to enable the anchor job.
+
 
 **Why External Cron?**
 -   **Isolation**: Anchoring failures do not crash the API.
@@ -70,6 +75,15 @@ Use the CLI to view the history of anchor runs:
 ```bash
 attest anchor logs 20
 ```
+
+Output:
+```text
+TIME                     STATUS    PROJECTS   COMMIT         ERROR
+2026-01-17 12:00         success   6          a81f3c9
+2026-01-17 11:00         failed    6                         git push failed
+```
+
+Note: `COMMIT` shows the Git commit hash of the anchor run. Verification ensures these commits form a continuous chain.
 
 **Handling Failed Anchors**
 If an anchor run fails (e.g., due to git push failure):

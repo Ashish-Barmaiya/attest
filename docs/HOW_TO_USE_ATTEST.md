@@ -272,6 +272,13 @@ Example:
 export ANCHOR_DIR=/var/attest/anchors
 npm run anchor
 ```
+
+For production, use the provided cron template:
+```bash
+cp scripts/attest-anchor.cron /etc/cron.d/attest-anchor
+# Edit the file to set the correct path and uncomment the line
+```
+
 The `npm run anchor` command automatically:
 1.  Reads the latest chain heads.
 2.  Writes the anchor file to `$ANCHOR_DIR`.
@@ -291,6 +298,8 @@ TIME                     STATUS    PROJECTS   COMMIT         ERROR
 2026-01-17 12:00         success   6          a81f3c9
 2026-01-17 11:00         failed    6                         git push failed
 ```
+
+The `COMMIT` column shows the Git commit hash. Attest uses this to verify the anchor chain history.
 
 You may optionally configure a separate cron job to `git push` from `$ANCHOR_DIR` to a remote repository.
 Anchors must live in a separate repository.

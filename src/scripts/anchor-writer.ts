@@ -25,6 +25,8 @@ async function main() {
       lastSequence: head.lastSequence,
       lastChainHash: head.lastChainHash,
       anchoredAt: Date.now(),
+      anchorCommit: null,
+      previousAnchorCommit: null,
     };
 
     const filePath = path.join(anchorDir, `project-${head.projectId}.json`);

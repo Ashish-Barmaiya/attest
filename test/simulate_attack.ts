@@ -20,7 +20,7 @@ async function attack() {
 
   // 2. Modify Event 3
   const targetIndex = 2; // Sequence 3
-  const targetEvent = events[targetIndex];
+  const targetEvent = events[targetIndex]!;
 
   if (targetEvent.sequence !== 3) {
     throw new Error(
@@ -42,7 +42,7 @@ async function attack() {
   const updates: any[] = [];
 
   for (let i = targetIndex; i < events.length; i++) {
-    const event = events[i];
+    const event = events[i]!;
 
     // For the target event, use new payload. For others, keep existing.
     const payload =

@@ -27,6 +27,68 @@ Attest operates on a strict separation of concerns between **ingestion**, **stor
     -   They fetch the latest anchor from the external source.
     -   They verify that the local chain matches the anchored state.
 
+
+5.  **Control Plane (Admin)**:
+    -   Operators manage projects and API keys via a CLI.
+    -   Protected by a high-entropy Admin Token.
+    -   Handles lifecycle events: Project Creation, Key Rotation, Revocation, Tombstoning.
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+
+subgraph "Client Side"
+    App[Application]
+    Admin[Admin CLI]
+    Verifier[Auditor / Verifier]
+end
+
+subgraph "Attest Service"
+    API[HTTP API]
+    Auth[Auth Middleware]
+    Ingest[Ingestion Engine]
+    Control[Control Plane]
+end
+
+subgraph "Storage Layer"
+    DB[(PostgreSQL)]
+    Events[audit_events]
+    Head[chain_head]
+    Keys[api_keys]
+    Projects[projects]
+end
+
+subgraph "External Trust"
+    Git["Anchor Repo (Git)"]
+end
+
+%% Ingestion Flow
+App -->|POST /events| API
+API --> Auth
+Auth --> Ingest
+Ingest -->|Append| Events
+Ingest -->|Update| Head
+
+%% Control Plane Flow
+Admin -->|Admin Token| API
+API --> Control
+Control -->|Manage| Projects
+Control -->|Manage| Keys
+Control -->|Tombstone| Projects
+
+%% Anchoring Flow
+Cron[Anchor Job] -->|Read Head| Head
+Cron -->|Commit & Push| Git
+
+%% Verification Flow
+Verifier -->|Fetch Logs| API
+Verifier -->|Fetch Anchor| Git
+Verifier -->|Verify Hash Chain| Events
+Verifier -->|Compare Anchor| Git
+```
+
+
 ## Verification Model
 
 Verification is the core value proposition of Attest. It consists of two layers:
