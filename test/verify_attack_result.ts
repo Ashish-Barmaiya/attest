@@ -1,7 +1,7 @@
-import { prisma } from "../db/database.js";
-import { verifyChain } from "../core/verify.js";
-import { readAnchor } from "../core/anchor-reader.js";
-import { verifyAgainstAnchor } from "../core/verify-anchor.js";
+import { prisma } from "../src/db/database.js";
+import { verifyChain } from "../src/core/verify.js";
+import { readAnchor } from "../src/core/anchor-reader.js";
+import { verifyAgainstAnchor } from "../src/core/verify-anchor.js";
 import path from "path";
 
 const PROJECT_ID = "attack-proof-proj";

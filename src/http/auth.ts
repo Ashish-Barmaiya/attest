@@ -19,14 +19,14 @@ export async function requireAuth(
 ) {
   const apiKey = req.header("x-api-key");
 
-  // Always do validation check (fast fail, but simulate work if possible)
+  // Always do validation check
   let keyToHash = apiKey;
   let isValidFormat = true;
 
   // 1. Validate format (64 hex chars)
   if (!apiKey || typeof apiKey !== "string" || !/^[0-9a-f]{64}$/.test(apiKey)) {
     isValidFormat = false;
-    // Use a dummy key for hashing to ensure work is still being done
+    // Dummy key for hashing to ensure work is still being done
     keyToHash =
       "0000000000000000000000000000000000000000000000000000000000000000";
   }
@@ -41,12 +41,11 @@ export async function requireAuth(
       where: { keyHash },
     });
 
-    // 4. Final Decision
-    // Fail if:
-    // - Format was invalid (isValidFormat === false)
-    // - Record not found (!keyRecord)
-    // - Key is revoked (keyRecord.revokedAt)
-    // - Dummy key was used (implied by !keyRecord usually, but explicit check helps)
+    // 4. Fail if:
+    // - Format was invalid
+    // - Record not found
+    // - Key is revoked
+    // - Dummy key was used
 
     if (!isValidFormat || !keyRecord || keyRecord.revokedAt) {
       // Uniform 401

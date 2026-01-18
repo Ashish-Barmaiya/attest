@@ -198,3 +198,19 @@ adminRouter.get("/projects/:projectId/events", async (req, res) => {
     res.status(500).json({ error: "Failed to export events" });
   }
 });
+// 7. Get Anchor Logs
+adminRouter.get("/anchor/logs", async (req, res) => {
+  const limit = parseInt(req.query.limit as string) || 20;
+
+  try {
+    const logs = await prisma.anchorRun.findMany({
+      orderBy: { startedAt: "desc" },
+      take: limit,
+    });
+
+    res.json(logs);
+  } catch (err) {
+    console.error("Failed to fetch anchor logs:", err);
+    res.status(500).json({ error: "Failed to fetch anchor logs" });
+  }
+});

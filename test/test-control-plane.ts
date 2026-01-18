@@ -1,6 +1,6 @@
-import { app } from "../http/server.js";
-import { initDb } from "../db/schema.js";
-import { prisma } from "../db/database.js";
+import { app } from "../src/http/server.js";
+import { initDb } from "../src/db/schema.js";
+import { prisma } from "../src/db/database.js";
 import assert from "assert";
 import http from "http";
 

@@ -1,9 +1,9 @@
-import { prisma } from "../db/database.js";
+import { prisma } from "../src/db/database.js";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { hash, canonicalize } from "../core/hash.js";
+import { hash, canonicalize } from "../src/core/hash.js";
 
 const ANCHOR_DIR = path.resolve("temp-anchors");
 
@@ -33,6 +33,7 @@ async function createProject(projectId: string) {
   await prisma.project.create({
     data: {
       id: projectId,
+      name: projectId,
       createdAt: Date.now(),
     },
   });

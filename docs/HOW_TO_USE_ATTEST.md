@@ -123,6 +123,7 @@ The Control Plane is not exposed to application code and should never be accessi
 *   Revoke API keys
 *   Export events
 *   Run verification
+*   Decommission projects
 
 **Authentication:**
 *   `ATTEST_ADMIN_TOKEN`
@@ -269,11 +270,29 @@ Anchoring should run periodically.
 Example:
 ```bash
 export ANCHOR_DIR=/var/attest/anchors
-npx tsx src/scripts/anchor-writer.ts
-cd /var/attest/anchors
-git commit -am "anchor: checkpoint"
-git push
+npm run anchor
 ```
+The `npm run anchor` command automatically:
+1.  Reads the latest chain heads.
+2.  Writes the anchor file to `$ANCHOR_DIR`.
+3.  Commits the changes to the local Git repository in `$ANCHOR_DIR`.
+4.  Pushes the changes to the configured remote (if `ANCHOR_GIT_REMOTE` is set).
+
+### Checking Anchor Status
+You can view the history of anchor runs to ensure they are succeeding:
+
+```bash
+attest anchor logs
+```
+
+Output:
+```text
+TIME                     STATUS    PROJECTS   COMMIT         ERROR
+2026-01-17 12:00         success   6          a81f3c9
+2026-01-17 11:00         failed    6                         git push failed
+```
+
+You may optionally configure a separate cron job to `git push` from `$ANCHOR_DIR` to a remote repository.
 Anchors must live in a separate repository.
 Anchoring is intentionally asynchronous and does not block event ingestion.
 

@@ -55,3 +55,19 @@ model ApiKey {
 
   @@map("api_keys")
 }
+
+/**
+ * Execution history of the anchoring process.
+ */
+model AnchorRun {
+  id           String    @id @default(uuid())
+  startedAt    DateTime
+  finishedAt   DateTime?
+  status       String // "running", "success", "failed"
+  projectCount Int?
+  anchorFile   String?
+  error        String?
+  gitCommit    String?
+
+  @@map("anchor_runs")
+}

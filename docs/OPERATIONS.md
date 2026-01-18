@@ -26,6 +26,59 @@ If the database is lost and restored from a backup:
 -   The service will resume from the backup's state.
 -   **Detection**: The next anchor attempt will likely fail or fork because the backup's `ChainHead` might be behind the previously published external anchor. This is a feature, not a bug—it alerts operators that data loss has occurred. This prevents silent rollback to an earlier, seemingly valid state.
 
+### Setup & Configuration
+
+**1. Anchor Directory (Git)**
+The anchoring system requires a local Git repository to store anchor files.
+1.  Create a new Git repository (e.g., on GitHub/GitLab).
+2.  Clone it to the server running Attest.
+3.  Set the environment variables:
+    ```bash
+    ANCHOR_DIR=/path/to/attest-anchors
+    ANCHOR_GIT_REMOTE=origin
+    ANCHOR_GIT_BRANCH=main
+    ANCHOR_GIT_AUTHOR_NAME="Attest Bot"
+    ANCHOR_GIT_AUTHOR_EMAIL="bot@attest.internal"
+    ```
+4.  Ensure the user running the cron job has write/commit access to this directory and SSH keys configured for the remote.
+
+**2. Cron Job**
+Anchoring must be triggered externally via system cron. It does not run inside the main API process.
+
+Example `crontab` entry (runs every hour):
+```bash
+0 * * * * cd /path/to/attest && npm run anchor >> /var/log/attest-anchor.log 2>&1
+```
+
+**Why External Cron?**
+-   **Isolation**: Anchoring failures do not crash the API.
+-   **Resource Control**: Anchoring happens independently of API load.
+-   **Simplicity**: No complex internal job schedulers or distributed locks.
+
+### Anchoring Lifecycle
+1.  **Trigger**: Cron fires `npm run anchor`.
+2.  **Read**: Script reads the latest `ChainHead` for all projects from the DB.
+3.  **Write**: Script writes a JSON file to `$ANCHOR_DIR/YYYY-MM-DD-HH.json`.
+4.  **Commit**: Script executes `git add .` and `git commit` in `$ANCHOR_DIR`.
+5.  **Push**: Script executes `git push` to the configured remote.
+6.  **Log**: Success or failure is recorded in the `anchor_runs` database table.
+
+### Monitoring & Recovery
+
+**Inspecting Anchor Logs**
+Use the CLI to view the history of anchor runs:
+```bash
+attest anchor logs 20
+```
+
+**Handling Failed Anchors**
+If an anchor run fails (e.g., due to git push failure):
+1.  Check the logs: `attest anchor logs`
+2.  Check the system logs: `/var/log/attest-anchor.log`
+3.  Fix the underlying issue (e.g., network outage, permission denied).
+4.  Manually trigger the anchor: `npm run anchor`
+5.  Verify the run succeeded: `attest anchor logs`
+
 ## Key Rotation
 
 -   **API Keys**: Should be rotated periodically. Revoking a key prevents *future* writes but does not invalidate *past* events.

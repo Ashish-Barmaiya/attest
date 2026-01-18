@@ -21,6 +21,31 @@ Attest assumes a "trust but verify" relationship with the service operator, and 
 | **Denial of Service** | Attacker deletes the entire database. | **Out of Scope.** Attest guarantees *tamper-evidence*, not *availability*. Use standard backup/replication strategies. |
 | **Pre-Ingestion Tampering** | The application sends false data to Attest. | **Out of Scope.** "Garbage in, garbage out." Attest proves the data hasn't changed *since* ingestion. |
 
+### Anchor Compromise Model
+If an attacker gains access to the **Anchor Writer credentials** (e.g., SSH keys for the Git repo):
+-   **Risk**: They can publish a valid anchor for a *forked* history.
+-   **Mitigation**:
+    -   **Detection**: If the legitimate cron job runs, it will fail to push (non-fast-forward) or create a divergent commit history in Git. This is audible via standard Git monitoring.
+    -   **Recovery**: The Git reflog and previous commits are immutable (SHA-1/SHA-256). The attacker cannot erase previous valid anchors without force-pushing, which should be disabled on the remote.
+
+### Constraints
+To maintain these guarantees, the system adheres to strict constraints:
+1.  **Deterministic Execution**: Anchoring scripts must produce identical output for identical DB states.
+2.  **No Background Threads**: We avoid complex in-memory buffering that could be lost on crash.
+3.  **No Hidden State**: All state is in the DB or the Anchor Repo. There is no Redis/Memcached layer that affects integrity.
+
+### Anchor History as Tamper Evidence
+The `anchor_runs` table provides a secondary audit log of the anchoring process itself.
+-   **If an attacker deletes the anchor history**: The absence of logs during a known operational period is evidence of tampering.
+-   **If an attacker modifies the anchor history**: The `gitCommit` hash in the DB would no longer match the actual Git history in the external repo.
+-   **Dual Compromise Required**: To successfully hide an attack, an attacker must:
+    1.  Rewrite the `audit_events` table.
+    2.  Rewrite the `chain_head` table.
+    3.  Rewrite the external Git repository history (requires Anchor Writer credentials).
+    4.  Rewrite the `anchor_runs` table to match the new Git commit hashes.
+
+This high bar for successful compromise is the core security value of Attest.
+
 ## Rate Limiting and Audit Integrity
 
 Rate limiting is a security control for availability, but it interacts with integrity:

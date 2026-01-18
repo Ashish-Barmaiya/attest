@@ -1,4 +1,4 @@
-import { prisma } from "../db/database.js";
+import { prisma } from "../src/db/database.js";
 
 async function testAppend() {
   console.log("Testing append event...");

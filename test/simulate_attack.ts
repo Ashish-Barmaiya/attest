@@ -1,5 +1,5 @@
-import { prisma } from "../db/database.js";
-import { hash, canonicalize } from "../core/hash.js";
+import { prisma } from "../src/db/database.js";
+import { hash, canonicalize } from "../src/core/hash.js";
 
 const PROJECT_ID = "attack-proof-proj";
 
@@ -39,7 +39,7 @@ async function attack() {
   let prevChainHash = targetEvent.prevChainHash; // Start from 3's prev
 
   // Need to update events starting from targetIndex
-  const updates = [];
+  const updates: any[] = [];
 
   for (let i = targetIndex; i < events.length; i++) {
     const event = events[i];

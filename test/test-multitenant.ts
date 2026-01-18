@@ -1,7 +1,7 @@
-import { prisma } from "../db/database.js";
-import { appendEventPersistent } from "../db/appendPersistent.js";
-import { loadAllEvents } from "../db/loadAll.js";
-import { verifyChain } from "../core/verify.js";
+import { prisma } from "../src/db/database.js";
+import { appendEventPersistent } from "../src/db/appendPersistent.js";
+import { loadAllEvents } from "../src/db/loadAll.js";
+import { verifyChain } from "../src/core/verify.js";
 
 const PROJECT_A = "project-a";
 const PROJECT_B = "project-b";

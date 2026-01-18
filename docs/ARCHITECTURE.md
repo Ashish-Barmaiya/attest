@@ -76,6 +76,25 @@ We validated this design against a "Strong Attacker" model. The attacker:
 
 **Conclusion**: To successfully rewrite history, an attacker must compromise **both** the Attest database and the external anchoring system (e.g., rewrite Git history) simultaneously.
 
+### Anchoring Lifecycle & Observability
+The anchoring process is designed to be auditable itself.
+
+1.  **Execution**: A cron job triggers the anchor script.
+2.  **Logging**: The script logs its start time and status ("running") to the `anchor_runs` table.
+3.  **Snapshot**: It reads the current chain head of all projects.
+4.  **Commit**: It writes a JSON file and commits it to the local Git repo.
+5.  **Push**: It pushes the commit to a remote Git repository (if configured).
+6.  **Completion**: It updates the `anchor_runs` table with the commit hash and status ("success").
+
+If any step fails (including the git push), the run is marked as "failed" in the `anchor_runs` table with the error message. This ensures that silent failures are detected.
+
+### Why Git?
+We use Git as the anchor storage medium because:
+1.  **Merkle Tree Structure**: Git itself is a Merkle tree. Every commit hash cryptographically depends on the entire history of the repository. Rewriting an old anchor requires rewriting all subsequent Git commits.
+2.  **Distributed Nature**: The anchor repository can be easily replicated to multiple offline or off-site locations (GitHub, GitLab, local backup server).
+3.  **Auditability**: Git provides standard, well-understood tools (`git log`, `git show`) for inspecting history. No custom verification tooling is needed to prove that the anchor file existed at a specific point in time.
+4.  **Simplicity**: It avoids the complexity and cost of a blockchain while providing similar immutability guarantees for this specific use case.
+
 ## Concurrency, Throughput, and Integrity Tradeoffs
 
 ### Serialization

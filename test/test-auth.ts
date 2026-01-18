@@ -1,5 +1,5 @@
-import { appendEventPersistent } from "../db/appendPersistent.js";
-import { prisma } from "../db/database.js";
+import { appendEventPersistent } from "../src/db/appendPersistent.js";
+import { prisma } from "../src/db/database.js";
 import crypto from "node:crypto";
 
 const BASE_URL = "http://localhost:3000";

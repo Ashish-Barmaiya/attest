@@ -12,45 +12,60 @@ export function readAnchor(
   projectId: string,
   anchorDir: string
 ): AnchorPayload {
-  const filePath = path.join(anchorDir, `project-${projectId}.json`);
+  // 1. Find the latest anchor file (YYYY-MM-DD-HH.json)
+  const files = fs.readdirSync(anchorDir).filter((f) => f.endsWith(".json"));
 
-  if (!fs.existsSync(filePath)) {
-    throw new Error(
-      `Anchor file not found for project ${projectId} at ${filePath}`
-    );
+  if (files.length === 0) {
+    throw new Error(`No anchor files found in ${anchorDir}`);
   }
 
+  // Sort descending to get the latest
+  files.sort().reverse();
+  const latestFile = files[0];
+
+  if (!latestFile) {
+    throw new Error(`No anchor files found in ${anchorDir}`);
+  }
+
+  const filePath = path.join(anchorDir, latestFile);
+
+  // 2. Read and parse
   let content: string;
   try {
     content = fs.readFileSync(filePath, "utf-8");
   } catch (err) {
-    throw new Error(
-      `Failed to read anchor file for project ${projectId}: ${err}`
-    );
+    throw new Error(`Failed to read anchor file ${filePath}: ${err}`);
   }
 
   let payload: any;
   try {
     payload = JSON.parse(content);
   } catch (err) {
-    throw new Error(`Invalid JSON in anchor file for project ${projectId}`);
+    throw new Error(`Invalid JSON in anchor file ${filePath}`);
   }
 
-  // Validate fields
-  if (typeof payload.projectId !== "string")
-    throw new Error("Invalid anchor: missing or invalid projectId");
-  if (typeof payload.lastSequence !== "number")
-    throw new Error("Invalid anchor: missing or invalid lastSequence");
-  if (typeof payload.lastChainHash !== "string")
-    throw new Error("Invalid anchor: missing or invalid lastChainHash");
-  if (typeof payload.anchoredAt !== "number")
-    throw new Error("Invalid anchor: missing or invalid anchoredAt");
-
-  if (payload.projectId !== projectId) {
+  // 3. Find project anchor
+  if (!payload.anchors || !Array.isArray(payload.anchors)) {
     throw new Error(
-      `Anchor projectId mismatch: expected ${projectId}, got ${payload.projectId}`
+      `Invalid anchor format in ${filePath}: missing anchors array`
     );
   }
 
-  return payload as AnchorPayload;
+  const projectAnchor = payload.anchors.find(
+    (a: any) => a.projectId === projectId
+  );
+
+  if (!projectAnchor) {
+    throw new Error(
+      `Project ${projectId} not found in latest anchor file ${latestFile}`
+    );
+  }
+
+  // 4. Return formatted payload
+  return {
+    projectId: projectAnchor.projectId,
+    lastSequence: projectAnchor.lastSequence,
+    lastChainHash: projectAnchor.lastChainHash,
+    anchoredAt: new Date(payload.timestamp).getTime(),
+  };
 }
