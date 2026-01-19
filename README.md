@@ -118,8 +118,8 @@ curl -X POST http://localhost:3000/events \
 -H "Content-Type: application/json" \
 -d '{
   "action": "login",
-  "actor": { "type": "user", "id": "alice" },
-  "resource": { "type": "session", "id": "web" }
+  "actor": { "type": "user", "id": "123" },
+  "resource": { "type": "session", "id": "321" }
 }'
 ```
 
