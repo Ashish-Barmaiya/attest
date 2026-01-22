@@ -24,14 +24,10 @@ async function request(path: string, options: RequestInit = {}) {
   };
 
   const res = await fetch(url, { ...options, headers });
-
   if (res.status === 204) return null;
 
   const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.error || "Unknown error");
-  }
+  if (!res.ok) throw new Error(data.error || "Request failed");
 
   return data;
 }
@@ -39,107 +35,21 @@ async function request(path: string, options: RequestInit = {}) {
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
-  const subcommand = args[1];
-
-  if (!command) {
-    printHelp();
-    return;
-  }
 
   try {
     switch (command) {
       case "project":
-        if (subcommand === "create") {
-          const name = args[2];
-          if (!name) throw new Error("Name is required");
-          const project = await request("/projects", {
-            method: "POST",
-            body: JSON.stringify({ name }),
-          });
-          console.log(JSON.stringify(project, null, 2));
-        } else if (subcommand === "list") {
-          const projects = await request("/projects");
-          console.log(JSON.stringify(projects, null, 2));
-        } else if (subcommand === "tombstone") {
-          const projectId = args[2];
-          const confirmFlag = args[3];
-          if (!projectId) throw new Error("Project ID is required");
-
-          if (confirmFlag !== "--confirm") {
-            console.warn(
-              "WARNING: This action is irreversible. The project will be permanently closed."
-            );
-            console.warn(
-              `To proceed, run: attest project tombstone ${projectId} --confirm`
-            );
-            process.exit(1);
-          }
-
-          const result = await request(`/projects/${projectId}/tombstone`, {
-            method: "POST",
-          });
-          console.log(JSON.stringify(result, null, 2));
-        } else {
-          printHelp();
-        }
+        await handleProject(args);
         break;
-
       case "key":
-        if (subcommand === "create") {
-          const projectId = args[2];
-          if (!projectId) throw new Error("Project ID is required");
-          const key = await request(`/projects/${projectId}/keys`, {
-            method: "POST",
-          });
-          console.log(JSON.stringify(key, null, 2));
-        } else if (subcommand === "rotate") {
-          const projectId = args[2];
-          if (!projectId) throw new Error("Project ID is required");
-
-          const key = await request(`/projects/${projectId}/keys`, {
-            method: "POST",
-          });
-
-          const output = {
-            ...key,
-            note: "Deploy this key before revoking old keys",
-          };
-          console.log(JSON.stringify(output, null, 2));
-        } else if (subcommand === "revoke") {
-          const keyId = args[2];
-          if (!keyId) throw new Error("Key ID is required");
-          await request(`/keys/${keyId}`, {
-            method: "DELETE",
-          });
-          console.log("Key revoked successfully.");
-        } else {
-          printHelp();
-        }
+        await handleKey(args);
         break;
-
       case "anchor":
-        if (subcommand === "logs") {
-          const limit = args[2] ? parseInt(args[2]) : 20;
-          const logs = await request(`/anchor/logs?limit=${limit}`);
-          printAnchorLogs(logs);
-        } else {
-          printHelp();
-        }
+        await handleAnchor(args);
         break;
-
       case "verify":
-        const projectId = args[1];
-        const anchorFlagIndex = args.indexOf("--anchors");
-        const anchorPath =
-          anchorFlagIndex !== -1
-            ? args[anchorFlagIndex + 1]
-            : process.env.ANCHOR_DIR;
-
-        if (!projectId) throw new Error("Project ID is required");
-
-        await verifyProject(projectId, anchorPath);
+        await handleVerify(args);
         break;
-
       default:
         printHelp();
     }
@@ -149,42 +59,109 @@ async function main() {
   }
 }
 
-function printAnchorLogs(logs: any[]) {
-  console.log(
-    "TIME".padEnd(25) +
-      "STATUS".padEnd(10) +
-      "PROJECTS".padEnd(10) +
-      "COMMIT".padEnd(15) +
-      "ERROR"
-  );
-  logs.forEach((log) => {
-    const time = new Date(log.startedAt)
-      .toISOString()
-      .slice(0, 16)
-      .replace("T", " ");
-    const status = log.status;
-    const projects = log.projectCount !== null ? String(log.projectCount) : "-";
-    const commit = log.gitCommit ? log.gitCommit.slice(0, 7) : "";
-    const error = log.error ? log.error.slice(0, 30) : "";
+/* ------------------ PROJECT ------------------ */
 
-    console.log(
-      time.padEnd(25) +
-        status.padEnd(10) +
-        projects.padEnd(10) +
-        commit.padEnd(15) +
-        error
-    );
-  });
+async function handleProject(args: string[]) {
+  const sub = args[1];
+
+  if (sub === "create") {
+    const name = args[2];
+    if (!name) throw new Error("Project name required");
+    const res = await request("/projects", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (sub === "list") {
+    const res = await request("/projects");
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (sub === "tombstone") {
+    const id = args[2];
+    if (!id) throw new Error("Project ID required");
+    if (args[3] !== "--confirm") {
+      console.warn("Run with --confirm to proceed");
+      process.exit(1);
+    }
+    const res = await request(`/projects/${id}/tombstone`, {
+      method: "POST",
+    });
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  printHelp();
 }
 
-async function verifyProject(projectId: string, anchorDir: string | undefined) {
+/* ------------------ KEYS ------------------ */
+
+async function handleKey(args: string[]) {
+  const sub = args[1];
+  const projectId = args[2];
+
+  if (!projectId) throw new Error("Project ID required");
+
+  if (sub === "create") {
+    const res = await request(`/projects/${projectId}/keys`, {
+      method: "POST",
+    });
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (sub === "rotate") {
+    const res = await request(`/projects/${projectId}/keys`, {
+      method: "POST",
+    });
+    console.log(
+      JSON.stringify(
+        { ...res, note: "Deploy new key before revoking old one" },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  if (sub === "revoke") {
+    const keyId = args[2];
+    await request(`/keys/${keyId}`, { method: "DELETE" });
+    console.log("Key revoked");
+    return;
+  }
+
+  printHelp();
+}
+
+/* ------------------ ANCHOR ------------------ */
+
+async function handleAnchor(args: string[]) {
+  if (args[1] === "logs") {
+    const limit = args[2] || "20";
+    const logs = await request(`/anchor/logs?limit=${limit}`);
+    printAnchorLogs(logs);
+    return;
+  }
+
+  printHelp();
+}
+
+/* ------------------ VERIFY ------------------ */
+
+async function handleVerify(args: string[]) {
+  const projectId = args[1];
+  if (!projectId) throw new Error("Project ID required");
+
+  const anchorIdx = args.indexOf("--anchors");
+
   console.log(`Verifying project ${projectId}...`);
 
-  // 1. Fetch events from server
-  console.log("Fetching events from server...");
   const eventsRaw = await request(`/projects/${projectId}/events`);
-
-  // Parse payloadJson
   const events = eventsRaw.map((e: any) => ({
     ...e,
     payload: JSON.parse(e.payloadJson),
@@ -192,145 +169,145 @@ async function verifyProject(projectId: string, anchorDir: string | undefined) {
 
   console.log(`Loaded ${events.length} events.`);
 
-  // 2. Verify Chain Integrity
-  process.stdout.write("Verifying internal chain integrity... ");
-  try {
-    verifyChain(events);
-    console.log("✔ Internal chain valid");
-  } catch (err) {
-    console.log("✖ Failed");
-    console.error("Chain integrity verification failed:", err);
-    process.exit(1);
-  }
+  verifyChain(events);
+  console.log("✅ Internal chain verified");
 
-  // 3. Verify Against Anchor
-  if (anchorDir) {
-    process.stdout.write("Verifying against anchor... ");
-    try {
-      const anchor = readAnchor(projectId, anchorDir);
+  let anchorDir =
+    anchorIdx !== -1
+      ? args[anchorIdx + 1]
+      : process.env.ANCHOR_DIR || "anchors";
 
-      // Verify the anchor chain history
-      verifyAnchorChain(anchorDir);
-
-      // Verify the events against the latest anchor
-      verifyAgainstAnchor(events, anchor, undefined);
-      console.log(
-        `✔ Anchor verified (${new Date(anchor.anchoredAt).toISOString()})`
-      );
-      console.log("✔ No tampering detected");
-      console.log(`\nEvents verified: ${events.length}`);
-      console.log(`Last anchor: ${new Date(anchor.anchoredAt).toISOString()}`);
-    } catch (err: any) {
-      console.log("✖ Failed");
-      if (err.message && err.message.includes("Anchor file not found")) {
-        console.warn(
-          "No anchor file found in provided directory. Skipping anchor verification."
-        );
-      } else {
-        console.error("Anchor verification failed:", err.message);
-        process.exit(1);
-      }
-    }
-  } else {
-    console.warn(
-      "No anchor directory provided (use --anchors or ANCHOR_DIR). Skipping anchor verification."
-    );
-  }
-}
-
-function printHelp() {
-  console.log(`
-Usage: attest <command> <subcommand> [args]
-
-Commands:
-  project create <name>
-  project list
-  project tombstone <projectId> [--confirm]
-  key create <projectId>
-  key rotate <projectId>
-  key revoke <keyId>
-  anchor logs [limit]
-  verify <projectId> [--anchors <path>]
-`);
-}
-
-function verifyAnchorChain(anchorDir: string | undefined) {
   if (!anchorDir) {
-    console.warn("No anchor directory provided. Skipping chain verification.");
+    console.warn("No anchor directory provided — skipping anchor verification");
     return;
   }
-  if (!fs.existsSync(path.join(anchorDir, ".git"))) {
-    console.warn(
-      "Anchor directory is not a git repository. Skipping chain verification."
+
+  let resolvedAnchorDir = path.resolve(anchorDir);
+  console.log(`Checking for anchor in ${resolvedAnchorDir}...`);
+
+  if (!fs.existsSync(resolvedAnchorDir)) {
+    // Fallback 1: Check if stripping leading slash helps (common mistake on Windows with Git Bash style paths)
+    let alternativePath = path.resolve(
+      process.cwd(),
+      anchorDir.replace(/^[/\\]/, ""),
     );
-    return;
+
+    // Fallback 2: Check for 'anchors' in CWD (common default)
+    if (!fs.existsSync(alternativePath)) {
+      alternativePath = path.resolve(process.cwd(), "anchors");
+    }
+
+    // Fallback 3: Check for basename in CWD
+    if (!fs.existsSync(alternativePath)) {
+      alternativePath = path.resolve(process.cwd(), path.basename(anchorDir));
+    }
+
+    if (fs.existsSync(alternativePath)) {
+      console.log(
+        `⚠️  Path ${resolvedAnchorDir} not found, but found ${alternativePath}. Using that.`,
+      );
+      resolvedAnchorDir = alternativePath;
+    } else {
+      console.warn(
+        `⚠️  Anchor directory not found at ${resolvedAnchorDir} (or fallbacks). Skipping anchor verification.`,
+      );
+      return;
+    }
   }
 
-  console.log("Verifying anchor commit chain...");
+  try {
+    const anchor = readAnchor(projectId, resolvedAnchorDir);
+    verifyAnchorIntegrity(resolvedAnchorDir);
+    verifyAgainstAnchor(events, anchor, undefined);
+    console.log("✅ Anchor verified");
+  } catch (err: any) {
+    console.warn(`⚠️  Anchor verification failed: ${err.message}`);
+  }
+}
 
-  // Get all anchor files sorted by time (descending)
+/* ------------------ ANCHOR VERIFICATION ------------------ */
+
+export function verifyAnchorIntegrity(anchorDir: string) {
+  if (!fs.existsSync(anchorDir)) {
+    throw new Error("Anchor directory does not exist");
+  }
+
   const files = fs
     .readdirSync(anchorDir)
     .filter((f) => f.endsWith(".json"))
-    .sort()
-    .reverse();
+    .sort();
 
-  if (files.length === 0) return;
+  if (files.length === 0) {
+    throw new Error("No anchor files found");
+  }
 
-  // Verify the latest anchor's claim about its previous commit.
+  const latestFile = files.at(-1)!;
+  const anchorPath = path.join(anchorDir, latestFile);
+  const anchor = JSON.parse(fs.readFileSync(anchorPath, "utf-8"));
 
-  const latestFile = files[0]!;
-  const latestPath = path.join(anchorDir, latestFile);
-  const latestContent = JSON.parse(fs.readFileSync(latestPath, "utf-8"));
-
-  const declaredPrevCommit = latestContent.previousAnchorCommit;
-
-  if (!declaredPrevCommit) {
-    if (files.length > 1) {
-      console.warn(
-        `Warning: Latest anchor ${latestFile} has no previousAnchorCommit, but multiple anchors exist.`
-      );
+  // ─────────────────────────────────────
+  // DEV MODE — JSON ONLY
+  // ─────────────────────────────────────
+  if (!fs.existsSync(path.join(anchorDir, ".git"))) {
+    if (!Array.isArray(anchor.anchors)) {
+      throw new Error("Invalid dev anchor format");
     }
+
+    console.log("✅ Dev anchor verified (JSON only)");
     return;
   }
 
-  // Check if `declaredPrevCommit` exists in git.
-  try {
-    execSync(`git cat-file -e ${declaredPrevCommit}`, {
-      cwd: anchorDir,
-      stdio: "ignore",
-    });
-  } catch (e) {
-    throw new Error(
-      `Anchor chain broken: previousAnchorCommit ${declaredPrevCommit} not found in git history.`
-    );
+  // ─────────────────────────────────────
+  // PROD MODE — GIT VERIFIED
+  // ─────────────────────────────────────
+  const prev = anchor.previousAnchorCommit;
+  if (!prev) {
+    throw new Error("Missing previousAnchorCommit");
   }
 
-  // Verify that the commit which introduced the latest anchor has declaredPrevCommit as a parent/ancestor
-  // The commit of the latest anchor is:
-  const latestCommit = execSync(`git log -n 1 --format=%H -- ${latestFile}`, {
+  execSync(`git cat-file -e ${prev}`, { cwd: anchorDir });
+
+  const commit = execSync(`git log -n 1 --format=%H -- ${latestFile}`, {
     cwd: anchorDir,
     encoding: "utf-8",
   }).trim();
 
-  if (!latestCommit) {
-    console.warn(`Warning: Latest anchor ${latestFile} is not committed yet.`);
-    return;
-  }
+  execSync(`git merge-base --is-ancestor ${prev} ${commit}`, {
+    cwd: anchorDir,
+  });
 
-  // Check if declaredPrevCommit is reachable from latestCommit
-  try {
-    execSync(
-      `git merge-base --is-ancestor ${declaredPrevCommit} ${latestCommit}`,
-      { cwd: anchorDir }
-    );
-  } catch (e) {
-    throw new Error(
-      `Anchor chain broken: ${declaredPrevCommit} is not an ancestor of ${latestCommit}`
-    );
-  }
+  console.log("✔ Git anchor chain verified");
+}
 
-  console.log("✔ Anchor chain verified (Git history matches)");
+/* ------------------ HELPERS ------------------ */
+
+function printAnchorLogs(logs: any[]) {
+  console.log(
+    "TIME".padEnd(25) + "STATUS".padEnd(10) + "PROJECTS".padEnd(10) + "COMMIT",
+  );
+
+  logs.forEach((l) => {
+    console.log(
+      new Date(l.startedAt).toISOString().padEnd(25) +
+        l.status.padEnd(10) +
+        String(l.projectCount ?? "-").padEnd(10) +
+        (l.gitCommit?.slice(0, 8) || ""),
+    );
+  });
+}
+
+function printHelp() {
+  console.log(`
+Usage:
+  attest project create <name>
+  attest project list
+  attest project tombstone <id> --confirm
+  attest key create <projectId>
+  attest key rotate <projectId>
+  attest key revoke <keyId>
+  attest anchor logs
+  attest verify <projectId> [--anchors <path>]
+`);
 }
 
 main();

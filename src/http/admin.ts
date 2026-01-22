@@ -63,6 +63,26 @@ adminRouter.get("/projects", async (req, res) => {
   }
 });
 
+// 2b. Get Project Head (for Prod Anchoring)
+adminRouter.get("/projects/:projectId/head", async (req, res) => {
+  const { projectId } = req.params;
+
+  try {
+    const head = await prisma.chainHead.findUnique({
+      where: { projectId },
+    });
+
+    if (!head) {
+      return res.status(404).json({ error: "Project head not found" });
+    }
+
+    res.json(head);
+  } catch (err) {
+    console.error("Failed to fetch project head:", err);
+    res.status(500).json({ error: "Failed to fetch project head" });
+  }
+});
+
 // 3. Create API Key
 adminRouter.post("/projects/:projectId/keys", async (req, res) => {
   const { projectId } = req.params;

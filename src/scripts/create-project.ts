@@ -6,6 +6,7 @@ const projectId = randomUUID();
 await prisma.project.create({
   data: {
     id: projectId,
+    name: "Default Project",
     createdAt: BigInt(Date.now()),
   },
 });

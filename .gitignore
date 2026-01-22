@@ -4,7 +4,7 @@ dist/
 
 # Environment secrets
 .env
-.env.*
+.env
 
 # Prisma
 /src/generated/prisma

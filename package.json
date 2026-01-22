@@ -5,16 +5,16 @@
   "type": "module",
   "private": true,
   "bin": {
-    "attest": "dist/cli/index.js"
+    "attest": "dist/src/cli/index.js"
   },
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx src/http/server.ts",
     "build": "tsc",
     "start": "node dist/http/server.js",
     "lint": "echo \"(optional) add eslint later\"",
     "test": "echo \"Run tests via: npx tsx test/<filename>\"",
-    "anchor": "tsx src/scripts/run-anchor.ts"
+    "anchor": "tsx src/scripts/anchor-entry.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

@@ -40,6 +40,22 @@ To maintain these guarantees, the system adheres to strict constraints:
 2.  **No Background Threads**: We avoid complex in-memory buffering that could be lost on crash.
 3.  **No Hidden State**: All state is in the DB or the Anchor Repo. There is no Redis/Memcached layer that affects integrity.
 
+### Anchoring Trust Boundaries
+
+The security of the anchoring process depends on the execution mode:
+
+1.  **Development Mode (Insecure)**:
+    -   The anchor script runs on the same host/container as the database.
+    -   It connects directly to the DB via Prisma.
+    -   **Risk**: If the host is compromised, the attacker has access to both the DB credentials and the anchor signing keys (Git credentials). They can rewrite history and publish a valid anchor.
+    -   **Use Case**: Local development, CI/CD testing only.
+
+2.  **Production Mode (Secure)**:
+    -   The anchor script runs on a **separate, isolated host** (e.g., a serverless function or a dedicated worker VM).
+    -   It has **NO** database access. It can only read the chain head via the public API.
+    -   **Trust Boundary**: The API is the trust boundary. The anchor worker trusts the API to report the current head, but the API cannot force the anchor worker to sign an invalid history (because the anchor worker validates the hash chain continuity from the previous anchor).
+    -   **Risk Mitigation**: Even if the database server is fully compromised, the attacker cannot force the isolated anchor worker to overwrite previous history in the external Git repo, provided the anchor worker's credentials are not stored on the database server.
+
 ### Anchor History as Tamper Evidence
 The `anchor_runs` table provides a secondary audit log of the anchoring process itself.
 -   **If an attacker deletes the anchor history**: The absence of logs during a known operational period is evidence of tampering.

@@ -4,6 +4,9 @@ FROM node:20-alpine
 # ---- Set working directory ----
 WORKDIR /app
 
+# Needed for anchoring
+RUN apk add --no-cache git
+
 # ---- Install dependencies first (better caching) ----
 COPY package.json package-lock.json* ./
 RUN npm install

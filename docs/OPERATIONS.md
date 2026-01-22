@@ -55,10 +55,26 @@ Example `crontab` entry (runs every hour):
 > The `scripts/attest-anchor.cron` file is provided as a template. You must uncomment the line in the file (or your crontab) to enable the anchor job.
 
 
-**Why External Cron?**
--   **Isolation**: Anchoring failures do not crash the API.
--   **Resource Control**: Anchoring happens independently of API load.
 -   **Simplicity**: No complex internal job schedulers or distributed locks.
+
+### Anchoring Modes
+
+Attest supports two anchoring modes: **Development** and **Production**.
+
+#### 1. Development Mode (Default)
+-   **Command**: `npm run anchor` (when `ANCHOR_MODE` is unset or `dev`)
+-   **Behavior**:
+    -   Connects directly to the database via Prisma.
+    -   Commits to a local Git repository.
+    -   **Warning**: This mode is **NOT SECURE** for production because the anchor script runs in the same trust domain as the database. If an attacker compromises the server, they can compromise both the DB and the anchor process.
+
+#### 2. Production Mode (Recommended)
+-   **Command**: `npm run anchor` (when `ANCHOR_MODE=prod`)
+-   **Behavior**:
+    -   Fetches chain heads via the Attest API (`GET /admin/projects/:id/head`).
+    -   Requires `ATTEST_API_URL` and `ATTEST_ADMIN_TOKEN`.
+    -   Commits and pushes to a remote Git repository.
+-   **Security**: This mode allows the anchor worker to run on a completely separate machine/container, establishing a strong trust boundary.
 
 ### Anchoring Lifecycle
 1.  **Trigger**: Cron fires `npm run anchor`.

@@ -267,23 +267,46 @@ Attest enforces rate limits to ensure stability. If you send too many requests, 
 ## 9. Anchoring (Operator Responsibility)
 Anchoring should run periodically.
 
-Example:
+### Quick Start Anchoring (Dev)
+For local development or testing, you can run the anchor script directly. It will connect to the database and commit to a local git repo.
+
 ```bash
-export ANCHOR_DIR=/var/attest/anchors
+export ANCHOR_DIR=./anchors
 npm run anchor
 ```
 
-For production, use the provided cron template:
-```bash
-cp scripts/attest-anchor.cron /etc/cron.d/attest-anchor
-# Edit the file to set the correct path and uncomment the line
-```
+> [!WARNING]
+> This mode is **NOT SECURE** for production. It requires the anchor script to have direct database access, which violates the trust boundary.
+
+### Production Anchoring (Recommended)
+In production, the anchor worker should be isolated from the database. It fetches chain heads via the API.
+
+1.  **Set Environment Variables**:
+    ```bash
+    export ANCHOR_MODE=prod
+    export ANCHOR_DIR=/var/attest/anchors
+    export ATTEST_API_URL=http://attest-api:3000
+    export ATTEST_ADMIN_TOKEN=<your-admin-token>
+    export ANCHOR_GIT_REMOTE=origin
+    ```
+
+2.  **Run the Anchor Script**:
+    ```bash
+    npm run anchor
+    ```
+
+3.  **Automate with Cron**:
+    ```bash
+    cp scripts/attest-anchor.cron /etc/cron.d/attest-anchor
+    # Edit the file to set the correct path and environment variables
+    ```
 
 The `npm run anchor` command automatically:
-1.  Reads the latest chain heads.
-2.  Writes the anchor file to `$ANCHOR_DIR`.
-3.  Commits the changes to the local Git repository in `$ANCHOR_DIR`.
-4.  Pushes the changes to the configured remote (if `ANCHOR_GIT_REMOTE` is set).
+1.  Detects the mode (`dev` or `prod`).
+2.  Reads the latest chain heads (via DB or API).
+3.  Writes the anchor file to `$ANCHOR_DIR`.
+4.  Commits the changes to the local Git repository in `$ANCHOR_DIR`.
+5.  Pushes the changes to the configured remote (if `ANCHOR_GIT_REMOTE` is set).
 
 ### Checking Anchor Status
 You can view the history of anchor runs to ensure they are succeeding:

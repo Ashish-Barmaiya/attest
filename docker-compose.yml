@@ -28,10 +28,11 @@ services:
       DATABASE_URL: postgres://attest:attest@db:5432/attest
       ATTEST_ADMIN_TOKEN: dev-admin-token
       NODE_ENV: production
+      ANCHOR_DIR: /anchors
     ports:
       - "3000:3000"
     volumes:
-      - anchors:/anchors
+      - ./anchors:/anchors
 
 volumes:
   postgres_data:
