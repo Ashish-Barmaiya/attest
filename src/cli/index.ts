@@ -261,16 +261,18 @@ export function verifyAnchorIntegrity(anchorDir: string) {
   // PROD MODE — GIT VERIFIED
   // ─────────────────────────────────────
   const prev = anchor.previousAnchorCommit;
-  if (!prev) {
-    throw new Error("Missing previousAnchorCommit");
-  }
-
-  execSync(`git cat-file -e ${prev}`, { cwd: anchorDir });
 
   const commit = execSync(`git log -n 1 --format=%H -- ${latestFile}`, {
     cwd: anchorDir,
     encoding: "utf-8",
   }).trim();
+
+  if (!prev) {
+    console.log("ℹ️  Genesis anchor detected (no previous commit)");
+    return;
+  }
+
+  execSync(`git cat-file -e ${prev}`, { cwd: anchorDir });
 
   execSync(`git merge-base --is-ancestor ${prev} ${commit}`, {
     cwd: anchorDir,

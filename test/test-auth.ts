@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { appendEventPersistent } from "../src/db/appendPersistent.js";
 import { prisma } from "../src/db/database.js";
 import crypto from "node:crypto";
@@ -31,7 +32,7 @@ async function request(
   method: string,
   path: string,
   key?: string,
-  body?: unknown
+  body?: unknown,
 ) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

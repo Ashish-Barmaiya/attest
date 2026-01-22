@@ -15,7 +15,7 @@ declare global {
 export async function requireAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const apiKey = req.header("x-api-key");
 

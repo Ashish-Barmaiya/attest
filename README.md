@@ -75,6 +75,29 @@ Ingestion, storage, and verification are treated as separate concerns so that ve
 
 ---
 
+## Quick Start
+
+1.  **Clone and Setup**:
+    ```bash
+    git clone https://github.com/your-org/attest.git
+    cd attest
+    cp .env.example .env
+    ```
+
+2.  **Run with Docker**:
+    ```bash
+    docker-compose up -d
+    ```
+
+3.  **Configure Anchoring**:
+    -   Set `ANCHOR_MODE=dev` in `.env` for local testing.
+    -   Set `ANCHOR_MODE=prod` for production (requires Git configuration).
+
+4.  **Read the Guide**:
+    -   See [How to Use Attest](./docs/HOW_TO_USE_ATTEST.md) for full usage instructions.
+
+---
+
 ## Key Lifecycle
 
 Attest enforces explicit key management:

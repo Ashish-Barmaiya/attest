@@ -1,0 +1,51 @@
+{
+  "mode": "dev",
+  "timestamp": "2026-01-22T16:09:45.973Z",
+  "anchors": [
+    {
+      "projectId": "1",
+      "lastSequence": 0,
+      "lastChainHash": "GENESIS"
+    },
+    {
+      "projectId": "test-anchor-1a57bcc3-cdf0-412c-82af-4656dd5e33aa",
+      "lastSequence": 5,
+      "lastChainHash": "6516f6aa1526e690b75e1e16aa7db7a92bb9573d9ab9e8f789bdcba972b1cc87"
+    },
+    {
+      "projectId": "e8d1a8b8-21c2-4354-bdaf-5ac10673d89c",
+      "lastSequence": 0,
+      "lastChainHash": "GENESIS"
+    },
+    {
+      "projectId": "test-anchor-e36b0466-5858-4241-8387-e2e75b9555c4",
+      "lastSequence": 5,
+      "lastChainHash": "6516f6aa1526e690b75e1e16aa7db7a92bb9573d9ab9e8f789bdcba972b1cc87"
+    },
+    {
+      "projectId": "auth-test-a",
+      "lastSequence": 0,
+      "lastChainHash": "GENESIS_A"
+    },
+    {
+      "projectId": "auth-test-b",
+      "lastSequence": 0,
+      "lastChainHash": "GENESIS_B"
+    },
+    {
+      "projectId": "test-anchor-91d82a0a-a2f4-4c57-91f6-e5552bba9797",
+      "lastSequence": 5,
+      "lastChainHash": "6516f6aa1526e690b75e1e16aa7db7a92bb9573d9ab9e8f789bdcba972b1cc87"
+    },
+    {
+      "projectId": "test-anchor-2031695f-7a30-4098-a220-4e7312a2ec2a",
+      "lastSequence": 5,
+      "lastChainHash": "6516f6aa1526e690b75e1e16aa7db7a92bb9573d9ab9e8f789bdcba972b1cc87"
+    },
+    {
+      "projectId": "test-anchor-51d19571-992a-4b1b-9eb2-ec2ff87e053c",
+      "lastSequence": 5,
+      "lastChainHash": "6516f6aa1526e690b75e1e16aa7db7a92bb9573d9ab9e8f789bdcba972b1cc87"
+    }
+  ]
+}

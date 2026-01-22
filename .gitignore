@@ -1,22 +1,22 @@
-# Node / TS
+# # Node / TS
 node_modules/
 dist/
 
-# Environment secrets
+# # Environment secrets
 .env
-.env
+.env.test
 
-# Prisma
+# # Prisma
 /src/generated/prisma
 
-# Anchors (external trust boundary)
+# # Anchors (external trust boundary)
 anchors/
 attest-anchors/
 
-# Logs
+# # Logs
 *.log
 
-# OS / Editor
+# # OS / Editor
 .DS_Store
 .vscode/
 .idea/

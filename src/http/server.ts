@@ -86,7 +86,7 @@ app.get("/head", async (req, res) => {
     if (!head) {
       console.error(
         "Invariant broken: missing chain head for project",
-        projectId
+        projectId,
       );
       return res.status(500).json({ error: "Internal error" });
     }

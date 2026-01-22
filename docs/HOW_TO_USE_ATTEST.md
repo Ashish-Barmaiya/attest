@@ -265,48 +265,52 @@ Attest enforces rate limits to ensure stability. If you send too many requests, 
 > Attest does **not** queue events internally. If you get a 429, the event was **not** written. You must handle the retry logic.
 
 ## 9. Anchoring (Operator Responsibility)
-Anchoring should run periodically.
+Anchoring should run periodically to bind the audit history to an external source of truth.
 
-### Quick Start Anchoring (Dev)
-For local development or testing, you can run the anchor script directly. It will connect to the database and commit to a local git repo.
+### Anchoring Modes
 
-```bash
-export ANCHOR_DIR=./anchors
-npm run anchor
-```
+Attest supports two anchoring modes, controlled by the `ANCHOR_MODE` environment variable:
 
-> [!WARNING]
-> This mode is **NOT SECURE** for production. It requires the anchor script to have direct database access, which violates the trust boundary.
+#### 1. Dev Mode (`ANCHOR_MODE=dev`)
+-   **Purpose**: Local development and testing.
+-   **Behavior**: Writes anchor files to a local directory (`ANCHOR_DIR`).
+-   **Security**: **NOT SECURE**. Does not provide tamper-evidence against a local attacker.
+-   **Setup**:
+    ```bash
+    export ANCHOR_MODE=dev
+    export ANCHOR_DIR=./anchors
+    npm run anchor
+    ```
 
-### Production Anchoring (Recommended)
-In production, the anchor worker should be isolated from the database. It fetches chain heads via the API.
-
-1.  **Set Environment Variables**:
+#### 2. Prod Mode (`ANCHOR_MODE=prod`)
+-   **Purpose**: Production deployments.
+-   **Behavior**:
+    1.  Fetches chain heads via the authenticated Control Plane API.
+    2.  Writes anchor files to a local Git repository.
+    3.  Commits the changes.
+    4.  Pushes to a remote Git repository (`ANCHOR_GIT_REMOTE`).
+-   **Security**: **SECURE**. Provides strong tamper-evidence by replicating history to an external system.
+-   **Setup**:
     ```bash
     export ANCHOR_MODE=prod
     export ANCHOR_DIR=/var/attest/anchors
     export ATTEST_API_URL=http://attest-api:3000
     export ATTEST_ADMIN_TOKEN=<your-admin-token>
     export ANCHOR_GIT_REMOTE=origin
+    export ANCHOR_GIT_BRANCH=main
+    export ANCHOR_GIT_AUTHOR_NAME="Attest Anchor Bot"
+    export ANCHOR_GIT_AUTHOR_EMAIL="bot@attest.dev"
     ```
 
-2.  **Run the Anchor Script**:
-    ```bash
-    npm run anchor
-    ```
+### Running the Anchor Job
+In production, automate this with a cron job:
 
-3.  **Automate with Cron**:
-    ```bash
-    cp scripts/attest-anchor.cron /etc/cron.d/attest-anchor
-    # Edit the file to set the correct path and environment variables
-    ```
+```bash
+# Run every hour
+0 * * * * cd /path/to/attest && /usr/bin/npm run anchor >> /var/log/attest-anchor.log 2>&1
+```
 
-The `npm run anchor` command automatically:
-1.  Detects the mode (`dev` or `prod`).
-2.  Reads the latest chain heads (via DB or API).
-3.  Writes the anchor file to `$ANCHOR_DIR`.
-4.  Commits the changes to the local Git repository in `$ANCHOR_DIR`.
-5.  Pushes the changes to the configured remote (if `ANCHOR_GIT_REMOTE` is set).
+The `npm run anchor` command automatically detects the mode and executes the appropriate logic.
 
 ### Checking Anchor Status
 You can view the history of anchor runs to ensure they are succeeding:

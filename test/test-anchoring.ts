@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { prisma } from "../src/db/database.js";
 import { execSync } from "child_process";
 import fs from "fs";
@@ -7,10 +8,11 @@ import { hash, canonicalize } from "../src/core/hash.js";
 
 const ANCHOR_DIR = path.resolve("temp-anchors");
 
-// Ensure anchor dir exists
-if (!fs.existsSync(ANCHOR_DIR)) {
-  fs.mkdirSync(ANCHOR_DIR);
+// Ensure anchor dir exists and is empty
+if (fs.existsSync(ANCHOR_DIR)) {
+  fs.rmSync(ANCHOR_DIR, { recursive: true, force: true });
 }
+fs.mkdirSync(ANCHOR_DIR);
 
 process.env.ANCHOR_DIR = ANCHOR_DIR;
 
@@ -52,7 +54,7 @@ async function addEvent(
   projectId: string,
   sequence: number,
   payload: any,
-  prevChainHash: string
+  prevChainHash: string,
 ) {
   const payloadJson = JSON.stringify(payload);
   const payloadHash = hash(canonicalize(payload));
@@ -96,13 +98,13 @@ async function testAnchoring() {
       projectId,
       i,
       { action: "create", item: i },
-      lastHash
+      lastHash,
     );
   }
 
   // 2. Write Anchor
   console.log("Writing anchor...");
-  const writerRes = await runCommand("npx tsx src/scripts/anchor-writer.ts");
+  const writerRes = await runCommand("npx tsx src/scripts/run-anchor-dev.ts");
   if (!writerRes.success) {
     console.error("Failed to write anchor:", writerRes.output);
     process.exit(1);
@@ -111,7 +113,7 @@ async function testAnchoring() {
   // 3. Verify Valid Case
   console.log("Test 1: Valid chain + matching anchor -> SHOULD PASS");
   const verifyRes1 = await runCommand(
-    `npx tsx src/scripts/verify-with-anchor.ts ${projectId}`
+    `npx tsx test/verify-with-anchor.ts ${projectId}`,
   );
   if (verifyRes1.success) {
     console.log("Passed");
@@ -124,7 +126,7 @@ async function testAnchoring() {
   console.log("Test 2: Chain extended beyond anchor -> SHOULD PASS");
   await addEvent(projectId, 6, { action: "update", item: 6 }, lastHash);
   const verifyRes2 = await runCommand(
-    `npx tsx src/scripts/verify-with-anchor.ts ${projectId}`
+    `npx tsx test/verify-with-anchor.ts ${projectId}`,
   );
   if (verifyRes2.success) {
     console.log("Passed");
@@ -135,7 +137,7 @@ async function testAnchoring() {
 
   // 5. Attack: Rollback (Delete recent events)
   console.log(
-    "Test 3: DB Rollback (delete event 6) -> SHOULD FAIL (if anchor was at 6, but anchor is at 5)"
+    "Test 3: DB Rollback (delete event 6) -> SHOULD FAIL (if anchor was at 6, but anchor is at 5)",
   );
   // Anchor is at 5. If it deletes 6, it is back to 5. This is actually VALID with respect to anchor at 5.
   // To test rollback failure, anchor needs to be at 6, then delete 6.
@@ -157,12 +159,12 @@ async function testAnchoring() {
   });
 
   const verifyRes3 = await runCommand(
-    `npx tsx src/scripts/verify-with-anchor.ts ${projectId}`
+    `npx tsx test/verify-with-anchor.ts ${projectId}`,
   );
   if (
     !verifyRes3.success &&
     verifyRes3.output.includes(
-      "History ends at sequence 5, but anchor requires 6"
+      "History ends at sequence 5, but anchor requires 6",
     )
   ) {
     console.log("Passed (Detected rollback)");
@@ -186,7 +188,7 @@ async function testAnchoring() {
   });
 
   const verifyRes4 = await runCommand(
-    `npx tsx src/scripts/verify-with-anchor.ts ${p2}`
+    `npx tsx test/verify-with-anchor.ts ${p2}`,
   );
   if (
     !verifyRes4.success &&
@@ -241,7 +243,7 @@ async function testAnchoring() {
   });
 
   const verifyRes5 = await runCommand(
-    `npx tsx src/scripts/verify-with-anchor.ts ${p3}`
+    `npx tsx test/verify-with-anchor.ts ${p3}`,
   );
   if (
     !verifyRes5.success &&
@@ -265,7 +267,7 @@ async function testAnchoring() {
   await prisma.auditEvent.deleteMany({ where: { projectId: p4 } });
 
   const verifyRes6 = await runCommand(
-    `npx tsx src/scripts/verify-with-anchor.ts ${p4}`
+    `npx tsx test/verify-with-anchor.ts ${p4}`,
   );
   if (
     !verifyRes6.success &&

@@ -28,4 +28,4 @@ EXPOSE 3000
 # - `prisma migrate deploy` applies existing migrations
 # - Safe for production
 # - Does NOT create new migrations
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/http/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/http/server.js"]

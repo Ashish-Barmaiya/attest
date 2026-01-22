@@ -20,6 +20,14 @@ if (!fs.existsSync(ANCHOR_DIR)) {
   process.exit(1);
 }
 
+const gitDir = path.join(ANCHOR_DIR, ".git");
+if (!fs.existsSync(gitDir)) {
+  console.error(
+    `Error: ANCHOR_DIR (${ANCHOR_DIR}) is not a Git repository. Run 'git init' first.`,
+  );
+  process.exit(1);
+}
+
 if (!ATTEST_API_URL) {
   console.error("Error: ATTEST_API_URL environment variable is not set.");
   process.exit(1);
@@ -106,8 +114,9 @@ async function runAnchor() {
     const filePath = path.join(ANCHOR_DIR!, filename);
 
     const anchorData = {
+      mode: "prod",
       timestamp,
-      anchorCommit: null,
+      anchorCommit: null as string | null,
       previousAnchorCommit,
       anchors,
     };
