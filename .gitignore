@@ -12,6 +12,8 @@ dist/
 # # Anchors (external trust boundary)
 anchors/
 attest-anchors/
+temp-anchors/
+test-anchors-prod/
 
 # # Logs
 *.log

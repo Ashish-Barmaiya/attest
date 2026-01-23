@@ -55,6 +55,8 @@ export async function requireAuth(
     // Attach project context
     req.projectId = keyRecord.projectId;
     (req as any).keyId = keyRecord.id;
+
+    next();
   } catch (err) {
     console.error("Auth error:", err);
     // Fail closed, ambiguously

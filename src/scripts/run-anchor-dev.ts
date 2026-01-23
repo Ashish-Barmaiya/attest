@@ -10,12 +10,23 @@ if (!ANCHOR_DIR) {
   process.exit(1);
 }
 
-if (!fs.existsSync(ANCHOR_DIR)) {
-  console.error(`❌ ANCHOR_DIR does not exist: ${ANCHOR_DIR}`);
-  process.exit(1);
-}
+let anchorDir = ANCHOR_DIR;
 
-const anchorDir = ANCHOR_DIR;
+if (!fs.existsSync(anchorDir)) {
+  // Resolve relative to CWD if the absolute path doesn't exist
+  // This handles the case where ANCHOR_DIR=/anchors (for Docker) but we are running locally
+  const relativePath = path.join(
+    process.cwd(),
+    ANCHOR_DIR.replace(/^[/\\]/, ""),
+  );
+  if (fs.existsSync(relativePath)) {
+    anchorDir = relativePath;
+  } else {
+    console.error(`❌ ANCHOR_DIR does not exist: ${ANCHOR_DIR}`);
+    console.error(`   Also checked: ${relativePath}`);
+    process.exit(1);
+  }
+}
 
 async function runAnchor() {
   console.log(`[${new Date().toISOString()}] Starting anchoring (DEV MODE)`);

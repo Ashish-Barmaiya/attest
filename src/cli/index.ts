@@ -285,15 +285,24 @@ export function verifyAnchorIntegrity(anchorDir: string) {
 
 function printAnchorLogs(logs: any[]) {
   console.log(
-    "TIME".padEnd(25) + "STATUS".padEnd(10) + "PROJECTS".padEnd(10) + "COMMIT",
+    "TIME".padEnd(25) +
+      "STATUS".padEnd(10) +
+      "PROJECTS".padEnd(11) +
+      "COMMIT".padEnd(15) +
+      "ERROR",
   );
 
   logs.forEach((l) => {
+    const date = new Date(l.startedAt);
+    const formattedDate =
+      date.toISOString().slice(0, 10) + " " + date.toISOString().slice(11, 16);
+
     console.log(
-      new Date(l.startedAt).toISOString().padEnd(25) +
+      formattedDate.padEnd(25) +
         l.status.padEnd(10) +
-        String(l.projectCount ?? "-").padEnd(10) +
-        (l.gitCommit?.slice(0, 8) || ""),
+        String(l.projectCount ?? "-").padEnd(11) +
+        (l.gitCommit?.slice(0, 8) || "").padEnd(15) +
+        (l.error || ""),
     );
   });
 }

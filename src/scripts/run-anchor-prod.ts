@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -15,12 +16,25 @@ if (!ANCHOR_DIR) {
   process.exit(1);
 }
 
-if (!fs.existsSync(ANCHOR_DIR)) {
-  console.error(`Error: ANCHOR_DIR (${ANCHOR_DIR}) does not exist.`);
-  process.exit(1);
+let anchorDir = ANCHOR_DIR;
+
+if (!fs.existsSync(anchorDir)) {
+  // Resolve relative to CWD if the absolute path doesn't exist
+  // This handles the case where ANCHOR_DIR=/anchors (for Docker) but we are running locally
+  const relativePath = path.join(
+    process.cwd(),
+    ANCHOR_DIR.replace(/^[/\\]/, ""),
+  );
+  if (fs.existsSync(relativePath)) {
+    anchorDir = relativePath;
+  } else {
+    console.error(`Error: ANCHOR_DIR (${ANCHOR_DIR}) does not exist.`);
+    console.error(`       Also checked: ${relativePath}`);
+    process.exit(1);
+  }
 }
 
-const gitDir = path.join(ANCHOR_DIR, ".git");
+const gitDir = path.join(anchorDir, ".git");
 if (!fs.existsSync(gitDir)) {
   console.error(
     `Error: ANCHOR_DIR (${ANCHOR_DIR}) is not a Git repository. Run 'git init' first.`,
@@ -61,10 +75,10 @@ async function runAnchor() {
 
   let previousAnchorCommit: string | null = null;
   try {
-    // Try to get the current HEAD commit hash
+    // Get the current HEAD commit hash
     try {
       previousAnchorCommit = execSync("git rev-parse HEAD", {
-        cwd: ANCHOR_DIR,
+        cwd: anchorDir,
         encoding: "utf-8",
         stdio: ["ignore", "pipe", "ignore"],
       }).trim();
@@ -111,7 +125,7 @@ async function runAnchor() {
     const now = new Date();
     const timestamp = now.toISOString();
     const filename = `${now.toISOString().slice(0, 13).replace("T", "-")}.json`;
-    const filePath = path.join(ANCHOR_DIR!, filename);
+    const filePath = path.join(anchorDir!, filename);
 
     const anchorData = {
       mode: "prod",
@@ -130,42 +144,42 @@ async function runAnchor() {
 
     if (GIT_AUTHOR_NAME) {
       execSync(`git config user.name "${GIT_AUTHOR_NAME}"`, {
-        cwd: ANCHOR_DIR,
+        cwd: anchorDir,
       });
     }
     if (GIT_AUTHOR_EMAIL) {
       execSync(`git config user.email "${GIT_AUTHOR_EMAIL}"`, {
-        cwd: ANCHOR_DIR,
+        cwd: anchorDir,
       });
     }
 
-    execSync("git add .", { cwd: ANCHOR_DIR, stdio: "inherit" });
+    execSync("git add .", { cwd: anchorDir, stdio: "inherit" });
 
     const commitMsg = `anchor: ${timestamp}`;
     execSync(`git commit -m "${commitMsg}"`, {
-      cwd: ANCHOR_DIR,
+      cwd: anchorDir,
       stdio: "inherit",
     });
 
     const commitHash = execSync("git rev-parse HEAD", {
-      cwd: ANCHOR_DIR,
+      cwd: anchorDir,
       encoding: "utf-8",
     }).trim();
-    console.log(`Git commit successful: ${commitHash}`);
+    console.log(`✅ Git commit successful: ${commitHash}`);
 
     // Push to remote
     if (GIT_REMOTE) {
       console.log(`Pushing to remote ${GIT_REMOTE}/${GIT_BRANCH}...`);
       execSync(`git push ${GIT_REMOTE} ${GIT_BRANCH}`, {
-        cwd: ANCHOR_DIR,
+        cwd: anchorDir,
         stdio: "inherit",
       });
-      console.log("Git push successful.");
+      console.log("✅ Git push successful.");
     }
 
-    console.log("Anchoring completed successfully.");
+    console.log("✅ Anchoring completed successfully.");
   } catch (err: any) {
-    console.error("Anchoring failed:", err.message);
+    console.error("❌ Anchoring failed:", err.message);
     process.exit(1);
   }
 }

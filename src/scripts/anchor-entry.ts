@@ -1,9 +1,12 @@
+import env from "dotenv";
 import { spawnSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+env.config();
 
 const mode = process.env.ANCHOR_MODE || "dev";
 
@@ -21,7 +24,7 @@ console.log(`[Anchor] Executing: ${scriptToRun}`);
 const result = spawnSync("tsx", [scriptToRun], {
   stdio: "inherit",
   env: process.env,
-  shell: true, // needed for windows sometimes, or just to be safe with tsx
+  shell: true,
 });
 
 process.exit(result.status ?? 1);

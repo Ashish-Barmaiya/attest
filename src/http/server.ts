@@ -32,7 +32,6 @@ import {
 } from "./rate-limit.js";
 
 app.use(globalRateLimit);
-app.use(requireAuth);
 
 app.post("/events", projectRateLimit, keyRateLimit, async (req, res) => {
   const parsed = IngestEventSchema.safeParse(req.body);
@@ -125,10 +124,12 @@ import { fileURLToPath } from "url";
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   initDb()
     .then(() => {
-      app.listen(3000, () => {
-        console.log("Audit service listening on :3000");
+      const port = parseInt(process.env.PORT || "3000", 10);
+      app.listen(port, () => {
+        console.log(`Audit service listening on :${port}`);
       });
     })
+
     .catch((err) => {
       console.error("Failed to initialize database:", err);
       process.exit(1);
