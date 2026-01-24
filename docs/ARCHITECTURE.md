@@ -99,7 +99,7 @@ This step ensures that the database has not been corrupted by random bit rot or 
 -   Verify `e[i].prevChainHash == e[i-1].chainHash`.
 -   Verify `e[i].chainHash == SHA256(e[i].prevChainHash + SHA256(e[i].payload))`.
 
-**Guarantee**: If this passes, the log is internally consistent. However, it does *not* prove that the history is the original history if a sophisticated attacker recomputed all hashes.
+**Guarantee**: If this passes, the log is internally consistent. However, it does *not* prove that the history is the original history if a sophisticated attacker recomputed all hashes. It provides **tamper-evidence** against naive corruption.
 
 ### 2. Anchor Verification (`verifyAgainstAnchor`)
 This step defends against "split-view" attacks and history rewriting.
@@ -149,6 +149,8 @@ The anchoring process is designed to be auditable itself.
 6.  **Completion**: It updates the `anchor_runs` table with the commit hash and status ("success").
 
 If any step fails (including the git push), the run is marked as "failed" in the `anchor_runs` table with the error message. This ensures that silent failures are detected.
+
+**Note**: The `anchor_runs` table is for **observational monitoring only**. Verification tools do **not** trust this table; they rely exclusively on the external Git history.
 
 ### Why Git?
 We use Git as the anchor storage medium because:

@@ -326,7 +326,18 @@ TIME                     STATUS    PROJECTS   COMMIT         ERROR
 2026-01-17 11:00         failed    6                         git push failed
 ```
 
-The `COMMIT` column shows the Git commit hash. Attest uses this to verify the anchor chain history.
+**What this shows:**
+- The time of the anchor attempt.
+- Whether it succeeded or failed.
+- The Git commit hash (if successful).
+
+**What this does NOT guarantee:**
+- This log is stored in the database. A compromised database could show fake success logs.
+- **Do not rely on this for verification.**
+
+**Relation to Verification:**
+- This command is for **operational monitoring** only.
+- True verification (`attest verify`) ignores these logs and checks the actual external Git repository.
 
 You may optionally configure a separate cron job to `git push` from `$ANCHOR_DIR` to a remote repository.
 Anchors must live in a separate repository.

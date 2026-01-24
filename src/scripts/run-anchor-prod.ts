@@ -68,6 +68,36 @@ async function fetchJson(path: string) {
   return res.json();
 }
 
+async function reportAnchorResult(payload: {
+  status: "success" | "failed";
+  projectCount?: number;
+  anchorFile?: string;
+  gitCommit?: string;
+  error?: string;
+}) {
+  try {
+    const url = `${ATTEST_API_URL}/admin/anchor-report`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ATTEST_ADMIN_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.error(
+        `⚠️ Failed to report anchor result: ${res.status} ${res.statusText}`,
+      );
+    } else {
+      console.log("✅ Anchor result reported to API.");
+    }
+  } catch (err) {
+    console.error("⚠️ Failed to report anchor result:", err);
+  }
+}
+
 async function runAnchor() {
   console.log(
     `[${new Date().toISOString()}] Starting anchoring process (PROD MODE)...`,
@@ -178,8 +208,21 @@ async function runAnchor() {
     }
 
     console.log("✅ Anchoring completed successfully.");
+
+    await reportAnchorResult({
+      status: "success",
+      projectCount: projects.length,
+      anchorFile: filename,
+      gitCommit: commitHash,
+    });
   } catch (err: any) {
     console.error("❌ Anchoring failed:", err.message);
+
+    await reportAnchorResult({
+      status: "failed",
+      error: err.message,
+    });
+
     process.exit(1);
   }
 }

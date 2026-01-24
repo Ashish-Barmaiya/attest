@@ -4,6 +4,16 @@
 
 Anchoring is the process of committing a cryptographic summary of the current audit history (the chain head) to an external source of truth.
 
+### Component Trust Levels
+
+| Component | Trust Level | Notes |
+| :--- | :--- | :--- |
+| **API** | Untrusted | Can be compromised; not relied upon for verification. |
+| **Database** | Untrusted | Can be rewritten by an attacker. |
+| **Anchor Report Table** | Untrusted | Observational only; can be faked. |
+| **Git Anchor Repo** | **Trusted** | The external source of truth. |
+| **Verification Tool** | **Trusted** | Must be run on a trusted machine (e.g., auditor's laptop). |
+
 ### Frequency
 Anchoring is performed asynchronously by a background worker. It is **not** performed synchronously on every write request to avoid latency penalties and external dependency bottlenecks.
 

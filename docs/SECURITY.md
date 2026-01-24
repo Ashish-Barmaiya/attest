@@ -18,7 +18,7 @@ Attest assumes a "trust but verify" relationship with the service operator, and 
 | Attack Vector | Description | Mitigation |
 | :--- | :--- | :--- |
 | **API Key Theft** | Attacker steals a valid API key and appends malicious events. | **Out of Scope.** Attest guarantees the integrity of the log, not the correctness or legitimacy of events submitted by a compromised client. Rotate keys immediately if compromised. |
-| **Denial of Service** | Attacker deletes the entire database. | **Out of Scope.** Attest guarantees *tamper-evidence*, not *availability*. Use standard backup/replication strategies. |
+| **Denial of Service** | Attacker deletes the entire database. | **Out of Scope.** Attest guarantees *tamper-evidence*, not *availability*. Use standard backup/replication strategies. | |
 | **Pre-Ingestion Tampering** | The application sends false data to Attest. | **Out of Scope.** "Garbage in, garbage out." Attest proves the data hasn't changed *since* ingestion. |
 
 ### Anchor Integrity
@@ -67,6 +67,12 @@ The `anchor_runs` table provides a secondary audit log of the anchoring process 
     4.  Rewrite the `anchor_runs` table to match the new Git commit hashes.
 
 This high bar for successful compromise is the core security value of Attest.
+
+### Anchor Reporting System
+The anchor reporting system exists **outside the trust boundary**.
+- **Observability Only**: Reports are stored in the DB for monitoring convenience.
+- **No Trust**: Verification never reads from the `anchor_reports` table. It relies solely on the external anchor source.
+- **Compromise**: Compromise of the database does not allow falsification of audit history, even if the attacker fakes anchor reports. Real verification always checks the external Git repository.
 
 ## Rate Limiting and Audit Integrity
 

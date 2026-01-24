@@ -218,19 +218,48 @@ adminRouter.get("/projects/:projectId/events", async (req, res) => {
     res.status(500).json({ error: "Failed to export events" });
   }
 });
-// 7. Get Anchor Logs
-adminRouter.get("/anchor/logs", async (req, res) => {
+// 7. Report Anchor Result
+adminRouter.post("/anchor-report", async (req, res) => {
+  const { status, projectCount, anchorFile, gitCommit, error } = req.body;
+
+  if (!status || (status !== "success" && status !== "failed")) {
+    return res.status(400).json({ error: "Invalid or missing status" });
+  }
+
+  try {
+    await prisma.anchorReport.create({
+      data: {
+        status,
+        projectCount,
+        anchorFile,
+        gitCommit,
+        error,
+        // time is set by default(now())
+      },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Failed to save anchor report:", err);
+    res.status(500).json({ error: "Failed to save anchor report" });
+  }
+});
+
+// 8. Get Anchor Reports
+adminRouter.get("/anchor-reports", async (req, res) => {
   const limit = parseInt(req.query.limit as string) || 20;
 
   try {
-    const logs = await prisma.anchorRun.findMany({
-      orderBy: { startedAt: "desc" },
+    const reports = await prisma.anchorReport.findMany({
+      orderBy: { time: "desc" },
       take: limit,
     });
 
-    res.json(logs);
+    // Convert Date to string for JSON consistency if needed,
+    // though res.json() handles Dates fine (ISO string).
+    res.json(reports);
   } catch (err) {
-    console.error("Failed to fetch anchor logs:", err);
-    res.status(500).json({ error: "Failed to fetch anchor logs" });
+    console.error("Failed to fetch anchor reports:", err);
+    res.status(500).json({ error: "Failed to fetch anchor reports" });
   }
 });

@@ -32,12 +32,7 @@ async function runAnchor() {
   console.log(`[${new Date().toISOString()}] Starting anchoring (DEV MODE)`);
   console.warn("⚠️  DEV MODE: Anchors are NOT tamper-proof");
 
-  const run = await prisma.anchorRun.create({
-    data: {
-      startedAt: new Date(),
-      status: "running",
-    },
-  });
+  // No initial DB record for AnchorReport (it's insert-only on completion)
 
   try {
     const heads = await prisma.chainHead.findMany();
@@ -45,11 +40,9 @@ async function runAnchor() {
     if (heads.length === 0) {
       console.log("No projects found.");
 
-      await prisma.anchorRun.update({
-        where: { id: run.id },
+      await prisma.anchorReport.create({
         data: {
           status: "success",
-          finishedAt: new Date(),
           projectCount: 0,
         },
       });
@@ -75,11 +68,9 @@ async function runAnchor() {
 
     console.log(`✅ Anchor written: ${filePath}`);
 
-    await prisma.anchorRun.update({
-      where: { id: run.id },
+    await prisma.anchorReport.create({
       data: {
         status: "success",
-        finishedAt: new Date(),
         projectCount: heads.length,
         anchorFile: filename,
       },
@@ -89,11 +80,9 @@ async function runAnchor() {
   } catch (err: any) {
     console.error("❌ Anchoring failed:", err.message);
 
-    await prisma.anchorRun.update({
-      where: { id: run.id },
+    await prisma.anchorReport.create({
       data: {
         status: "failed",
-        finishedAt: new Date(),
         error: err.message,
       },
     });

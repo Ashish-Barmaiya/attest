@@ -143,7 +143,7 @@ async function handleKey(args: string[]) {
 async function handleAnchor(args: string[]) {
   if (args[1] === "logs") {
     const limit = args[2] || "20";
-    const logs = await request(`/anchor/logs?limit=${limit}`);
+    const logs = await request(`/anchor-reports?limit=${limit}`);
     printAnchorLogs(logs);
     return;
   }
@@ -293,7 +293,7 @@ function printAnchorLogs(logs: any[]) {
   );
 
   logs.forEach((l) => {
-    const date = new Date(l.startedAt);
+    const date = new Date(l.time);
     const formattedDate =
       date.toISOString().slice(0, 10) + " " + date.toISOString().slice(11, 16);
 

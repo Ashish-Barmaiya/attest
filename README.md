@@ -36,6 +36,24 @@ Ingestion, storage, and verification are treated as separate concerns so that ve
 
 ---
 
+## Trust Model
+
+Attest assumes that the application server and database may be compromised.
+Integrity guarantees begin only once audit state is anchored to an external system.
+
+**Verification does not trust:**
+- The Attest API
+- The database
+- Anchor metadata stored internally
+
+**Verification trusts only:**
+- Cryptographic hash chains
+- External anchor history (e.g., Git)
+
+This design allows tampering to be detected even after a full system compromise.
+
+---
+
 ## Who This Is For
 
 ### Intended Users
@@ -70,8 +88,8 @@ Ingestion, storage, and verification are treated as separate concerns so that ve
   The sequence number and hash of the most recent event in a project.
 
 - **Anchoring**  
-  Periodic publication of the Chain Head to an external, append-only system.  
-  This prevents rollback, truncation, and split-view attacks.
+  Anchoring publishes cryptographic snapshots of audit state to a system **outside the control of the Attest database**.  
+  This prevents silent history rewriting even by a privileged operator. Anchoring is not performed by the API and is not trusted unless verified externally.
 
 ---
 
@@ -158,7 +176,7 @@ attest verify <PROJECT_ID> --anchors /path/to/anchors
 ## Guarantees
 
 ### Integrity
-Any modification to historical events invalidates the hash chain.
+Any modification to historical events invalidates the hash chain. Attest **detects** tampering, it does not prevent the database from being modified by a root user.
 
 ### Isolation
 Projects are fully isolated; cross-tenant influence is impossible.
@@ -168,16 +186,17 @@ Write access is controlled exclusively via API keys.
 No client-supplied identity is trusted.
 
 ### Tamper-Evidence
-History rewrites — including correctly recomputed chains — are detected once anchored externally.
+History rewrites — including correctly recomputed chains — are **detected** once anchored externally.
 
-## Non-Goals
+## What Attest Does NOT Do
 
-Attest intentionally does not provide:
+Attest provides **tamper evidence**, not tamper prevention. It does **not**:
 
-- Blockchain or consensus mechanisms
-- A hosted SaaS or UI dashboard
-- Real-time alerting
-- High-throughput analytics or search
+- **Prevent malicious input**: "Garbage in, garbage out".
+- **Prevent API key misuse**: If a key is stolen, it can write events (until revoked).
+- **Guarantee availability**: It is not a high-availability database.
+- **Provide real-time alerts**: Verification is an asynchronous audit process.
+- **Replace application-level validation**: It proves *what* happened, not whether it *should* have happened.
 
 Attest is infrastructure for provable audit integrity, not a general logging platform.
 
