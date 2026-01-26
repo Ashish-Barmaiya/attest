@@ -143,6 +143,7 @@ Projects are never deleted, only **tombstoned**:
 - [Operations](./docs/OPERATIONS.md)
 - [Control Plane & CLI](./docs/CONTROL_PLANE.md)
 - [How to Use Attest](./docs/HOW_TO_USE_ATTEST.md)
+- [Performance](./docs/PERFORMANCE.md)
 
 ---
 
