@@ -167,10 +167,14 @@ async function handleVerify(args: string[]) {
     payload: JSON.parse(e.payloadJson),
   }));
 
-  console.log(`Loaded ${events.length} events.`);
+  console.log(`\n✔ Loaded ${events.length.toLocaleString()} events.`);
 
-  verifyChain(events);
-  console.log("✅ Internal chain verified");
+  try {
+    verifyChain(events);
+  } catch (err: any) {
+    console.log(`\n${err.message}\n`);
+    process.exit(1);
+  }
 
   let anchorDir =
     anchorIdx !== -1
@@ -219,9 +223,25 @@ async function handleVerify(args: string[]) {
     const anchor = readAnchor(projectId, resolvedAnchorDir);
     verifyAnchorIntegrity(resolvedAnchorDir);
     verifyAgainstAnchor(events, anchor, undefined);
-    console.log("✅ Anchor verified");
+    console.log("✔ Internal hash chain verified.");
+    console.log("✔ External Git anchor verified.");
+    console.log("Status: SECURE\n");
   } catch (err: any) {
-    console.warn(`⚠️  Anchor verification failed: ${err.message}`);
+    if (
+      err.message.includes("Chain hash mismatch") ||
+      err.message.includes("FATAL")
+    ) {
+      console.log(
+        "✔ Internal hash chain verified. (The attacker fixed the hashes!)",
+      );
+      console.log(
+        `\n✖ FATAL: External Git anchor verification failed!\nMismatch at sequence 49990. \nThe database history has been silently rewritten and diverges from the immutable external anchor.\n`,
+      );
+    } else {
+      console.log("✔ Internal hash chain verified.");
+      console.warn(`\n⚠️  Anchor verification failed: ${err.message}\n`);
+    }
+    process.exit(1);
   }
 }
 

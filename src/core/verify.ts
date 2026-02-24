@@ -11,7 +11,11 @@ export function verifyChain(events: readonly AuditEvent[]): void {
     const expectedPayloadHash = hash(canonicalize(event.payload));
 
     if (event.payloadHash !== expectedPayloadHash) {
-      throw new Error(`Payload hash mismatch at sequence ${event.sequence}`);
+      throw new Error(
+        `✖ FAILED: Internal hash chain corrupted at sequence ${event.sequence}.\n` +
+          `Expected hash: ${expectedPayloadHash.substring(0, 8)}...\n` +
+          `Found hash: ${event.payloadHash.substring(0, 8)}...`,
+      );
     }
 
     if (i > 0) {

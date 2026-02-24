@@ -36,6 +36,12 @@ Ingestion, storage, and verification are treated as separate concerns so that ve
 
 ---
 
+### See It In Action
+
+![Attest Verification Demo](./assets/attest-demo.gif)
+
+---
+
 ## Trust Model
 
 Attest assumes that the application server and database may be compromised.
