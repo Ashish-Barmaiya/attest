@@ -38,7 +38,7 @@ Ingestion, storage, and verification are treated as separate concerns so that ve
 
 ### See It In Action
 
-![Attest Verification Demo](./assets/attest-demo.gif)
+![Attest Verification Demo](./assets/attest-demo2.gif)
 
 ---
 
