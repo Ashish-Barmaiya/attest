@@ -13,28 +13,36 @@ adminRouter.post("/projects", async (req, res) => {
     return res.status(400).json({ error: "Project name is required" });
   }
 
-  const projectId = randomUUID();
+  const projectId = randomUUID(); // TODO: remove this from here and set it as @default in schema and migrate
   const createdAt = BigInt(Date.now());
+  /*
+  createdAt is stored as BigInt in the database and converted to string in the response. It is better than using DateTime because:
+  - Date string can be formatted differently depending on the environment and timezone. This could lead to verification failure.
+  - BigInt is a primitive type and is not subject to timezone conversion.
+  */
 
   try {
-    // Create project
-    await prisma.project.create({
-      data: {
-        id: projectId,
-        name,
-        createdAt,
-      },
+    await prisma.$transaction(async (tx) => {
+      // Create project
+      await tx.project.create({
+        data: {
+          id: projectId,
+          name,
+          createdAt,
+        },
+      });
+
+      // Initialize chain head
+      await tx.chainHead.create({
+        data: {
+          projectId,
+          lastSequence: 0,
+          lastChainHash: "GENESIS",
+        },
+      });
     });
 
-    // Initialize chain head
-    await prisma.chainHead.create({
-      data: {
-        projectId,
-        lastSequence: 0,
-        lastChainHash: "GENESIS",
-      },
-    });
-
+    // Response is sent AFTER the transaction commits successfully - this is important as it troubled me a lot beacause I put the response inside the transaction and was getting 500s
     res.status(201).json({
       projectId,
       name,
