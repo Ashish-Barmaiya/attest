@@ -1,0 +1,66 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build, Lint, and Test
+    runs-on: ubuntu-latest
+
+    # Spin up a throwaway Postgres database for the integration tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: attest_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Provide the environment variables your tests expect
+    env:
+      DATABASE_URL: postgresql://root:password@localhost:5432/attest_test?schema=public
+      ATTEST_ADMIN_TOKEN: test-token
+      PORT: 3000
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Code
+        # Will fail the build if there are TypeScript or ESLint errors
+        run: npm run lint
+
+      - name: Apply Database Schema
+        # Pushes Prisma schema to the blank Postgres container
+        run: npx prisma db push --accept-data-loss
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+    #   - name: Run Unit Tests
+        # run: npm run test:unit
+        # Note: Don't actually have isolated unit tests yet, commented this out.
+
+      - name: Run Integration Tests
+        # This runs the Jest suite we just built
+        run: npm run test:integration

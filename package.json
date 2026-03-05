@@ -12,8 +12,10 @@
     "dev": "tsx src/http/server.ts",
     "build": "tsc",
     "start": "node dist/http/server.js",
-    "lint": "echo \"(optional) add eslint later\"",
-    "test": "echo \"Run tests via: npx tsx test/<filename>\"",
+    "lint": "tsc --noEmit",
+    "test": "jest",
+    "test:unit": "echo 'No isolated unit tests yet' && exit 0",
+    "test:integration": "jest --runInBand",
     "anchor": "tsx src/scripts/anchor-entry.ts"
   },
   "dependencies": {
