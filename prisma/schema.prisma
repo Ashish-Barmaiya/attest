@@ -13,6 +13,11 @@ model project {
   createdAt    BigInt
   tombstonedAt BigInt?
 
+  // Inverse relations for Prisma
+  chainHead   ChainHead?
+  auditEvents AuditEvent[]
+  apiKeys     ApiKey[]
+
   @@map("projects")
 }
 
@@ -24,11 +29,14 @@ model ChainHead {
   lastSequence  Int
   lastChainHash String
 
+  // Foreign Key Relation
+  project project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   @@map("chain_head")
 }
 
 /**
- * Append-only audit log..
+ * Append-only audit log.
  */
 model AuditEvent {
   projectId     String
@@ -38,6 +46,9 @@ model AuditEvent {
   prevChainHash String
   chainHash     String
   createdAt     BigInt
+
+  // Foreign Key Relation
+  project project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@id([projectId, sequence])
   @@map("audit_events")
@@ -52,6 +63,9 @@ model ApiKey {
   projectId String
   createdAt BigInt
   revokedAt BigInt?
+
+  // Foreign Key Relation
+  project project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("api_keys")
 }
