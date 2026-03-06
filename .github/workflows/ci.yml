@@ -26,6 +26,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     # Provide the environment variables your tests expect
     env:
@@ -62,5 +71,5 @@ jobs:
         # Note: Don't actually have isolated unit tests yet, commented this out.
 
       - name: Run Integration Tests
-        # This runs the Jest suite we just built
+        # This runs the Jest suite
         run: npm run test:integration

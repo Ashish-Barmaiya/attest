@@ -1,121 +1,112 @@
 import dotenv from "dotenv";
 import type { Request, Response, NextFunction } from "express";
 import { getProjectContext } from "./auth.js";
+import { Redis } from "ioredis";
 
 dotenv.config();
 
-/* ================================
-   Types
-================================ */
-
-interface RateLimitState {
-  tokens: number;
-  lastRefill: number;
-}
-
-/* ================================
-   Config
-================================ */
-
+// ----Config----
 const WINDOW_MS = parseInt(
   process.env.ATTEST_RATE_LIMIT_WINDOW_MS || "1000",
   10,
 );
-
 const GLOBAL_RPS = parseInt(process.env.ATTEST_GLOBAL_RPS || "100", 10);
 const PROJECT_RPS = parseInt(process.env.ATTEST_PROJECT_RPS || "10", 10);
 const KEY_RPS = parseInt(process.env.ATTEST_KEY_RPS || "5", 10);
-
 const DISABLE_RATE_LIMIT = process.env.ATTEST_DISABLE_RATE_LIMIT === "true";
 
-console.log("Rate Limit Configuration:");
+console.log("Rate Limit Configuration (Redis):");
 console.log(`  Window: ${WINDOW_MS}ms`);
 console.log(`  Global RPS: ${GLOBAL_RPS}`);
 console.log(`  Project RPS: ${PROJECT_RPS}`);
 console.log(`  Key RPS: ${KEY_RPS}`);
-console.log(`  Disabled: ${DISABLE_RATE_LIMIT}`);
 
-/* ================================
-   Stores
-================================ */
+// ----Redis Setup & Lua Script----
 
-const globalStore: RateLimitState = {
-  tokens: GLOBAL_RPS,
-  lastRefill: Date.now(),
-};
+// Connect to the local Redis container
+export const redis = new Redis(
+  process.env.REDIS_URL || "redis://localhost:6379",
+);
 
-const projectStore = new Map<string, RateLimitState>();
-const keyStore = new Map<string, RateLimitState>();
+// Define an atomic Token Bucket operation using Lua
+redis.defineCommand("takeToken", {
+  numberOfKeys: 1,
+  lua: `
+    local key = KEYS[1]
+    local rate = tonumber(ARGV[1])
+    local windowMs = tonumber(ARGV[2])
+    local now = tonumber(ARGV[3])
 
-export function resetRateLimits() {
-  globalStore.tokens = GLOBAL_RPS;
-  globalStore.lastRefill = Date.now();
-  projectStore.clear();
-  keyStore.clear();
-}
+    -- Fetch current state from Redis
+    local current = redis.call("HMGET", key, "tokens", "lastRefill")
+    local tokens = tonumber(current[1])
+    local lastRefill = tonumber(current[2])
 
-/* ================================
-   Token Bucket Logic
-================================ */
+    -- Initialize if it doesn't exist
+    if not tokens then
+      tokens = rate
+      lastRefill = now
+    end
 
-function checkLimit(
-  store: RateLimitState,
-  rate: number,
-  windowMs: number,
-): boolean {
-  const now = Date.now();
+    -- Calculate how many tokens to refill based on elapsed time
+    local elapsed = math.max(0, now - lastRefill)
+    local refill = (elapsed / windowMs) * rate
+    tokens = math.min(rate, tokens + refill)
+    lastRefill = now
 
-  const elapsed = now - store.lastRefill;
-  const refill = (elapsed / windowMs) * rate;
+    local allowed = 0
+    if tokens >= 1 then
+      tokens = tokens - 1
+      allowed = 1
+    end
 
-  store.tokens = Math.min(rate, store.tokens + refill);
-  store.lastRefill = now;
+    -- Save state and set an automatic expiration to prevent memory leaks!
+    redis.call("HMSET", key, "tokens", tokens, "lastRefill", lastRefill)
+    redis.call("PEXPIRE", key, windowMs * 2) 
 
-  if (store.tokens >= 1) {
-    store.tokens -= 1;
-    return true;
-  }
+    return allowed
+  `,
+});
 
-  return false;
-}
+// ----Core Logic----
 
-function getOrInitStore(
-  map: Map<string, RateLimitState>,
+async function checkLimit(
   key: string,
   rate: number,
-): RateLimitState {
-  let state = map.get(key);
-  if (!state) {
-    state = {
-      tokens: rate,
-      lastRefill: Date.now(),
-    };
-    map.set(key, state);
-  }
-  return state;
+  windowMs: number,
+): Promise<boolean> {
+  // @ts-ignore - ioredis injects this method dynamically at runtime
+  const result = await redis.takeToken(key, rate, windowMs, Date.now());
+  return result === 1;
 }
 
-/* ================================
-   Middleware
-================================ */
+export async function resetRateLimits() {
+  // For testing purposes: wipe the Redis database cleanly
+  await redis.flushdb();
+}
 
-export function globalRateLimit(
+// ----Middleware----
+
+export async function globalRateLimit(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
   if (DISABLE_RATE_LIMIT) return next();
 
-  if (!checkLimit(globalStore, GLOBAL_RPS, WINDOW_MS)) {
-    return res.status(429).json({
-      error: "Too Many Requests (Global)",
-    });
+  try {
+    const allowed = await checkLimit("rl:global", GLOBAL_RPS, WINDOW_MS);
+    if (!allowed) {
+      return res.status(429).json({ error: "Too Many Requests (Global)" });
+    }
+    next();
+  } catch (err) {
+    console.error("Global rate limit error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-
-  next();
 }
 
-export function projectRateLimit(
+export async function projectRateLimit(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -124,36 +115,44 @@ export function projectRateLimit(
 
   try {
     const projectId = getProjectContext(req);
-    const store = getOrInitStore(projectStore, projectId, PROJECT_RPS);
+    const allowed = await checkLimit(
+      `rl:project:${projectId}`,
+      PROJECT_RPS,
+      WINDOW_MS,
+    );
 
-    if (!checkLimit(store, PROJECT_RPS, WINDOW_MS)) {
-      return res.status(429).json({
-        error: "Too Many Requests (Project)",
-      });
+    if (!allowed) {
+      return res.status(429).json({ error: "Too Many Requests (Project)" });
     }
-
     next();
   } catch (err) {
     console.error("Project rate limit error:", err);
-    return res.status(500).json({
-      error: "Internal Server Error",
-    });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
-export function keyRateLimit(req: Request, res: Response, next: NextFunction) {
+export async function keyRateLimit(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   if (DISABLE_RATE_LIMIT) return next();
 
-  const keyId = (req as any).keyId;
-  if (!keyId) return next();
+  try {
+    const keyId = (req as any).keyId;
+    if (!keyId) return next();
 
-  const store = getOrInitStore(keyStore, keyId, KEY_RPS);
-
-  if (!checkLimit(store, KEY_RPS, WINDOW_MS)) {
-    return res.status(429).json({
-      error: "Too Many Requests (Key)",
-    });
+    const allowed = await checkLimit(`rl:key:${keyId}`, KEY_RPS, WINDOW_MS);
+    if (!allowed) {
+      return res.status(429).json({ error: "Too Many Requests (Key)" });
+    }
+    next();
+  } catch (err) {
+    console.error("Key rate limit error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
+}
 
-  next();
+export async function closeRateLimiter() {
+  await redis.quit();
 }
