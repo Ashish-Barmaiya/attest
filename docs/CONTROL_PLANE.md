@@ -90,9 +90,12 @@ The CLI recomputes the entire hash chain locally and verifies it against externa
 
 ## API Reference
 
+> [!IMPORTANT]
+> **API Constraints:** All `:projectId` and `:keyId` path parameters MUST be valid RFC 4122 v4 UUIDs. Providing arbitrary strings will result in an immediate `400 Bad Request`.
+
 ### `POST /admin/projects`
 Create a new project.
-- **Body**: `{ "name": "string" }`
+- **Body**: `{ "name": "string (3-255 characters, whitespace trimmed)" }`
 - **Response**: `{ "projectId": "...", "name": "...", "createdAt": "..." }`
 
 ### `GET /admin/projects`

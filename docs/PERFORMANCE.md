@@ -55,6 +55,9 @@ The following benchmarks were conducted on a standard deployment.
 **Analysis**:
 The high failure rate (approx. 80%) is due to optimistic locking contention on the project head. When 50 clients attempt to append to the same chain simultaneously, only one succeeds. The others fail with a concurrency error (409/500) rather than queuing indefinitely. This ensures clients know immediately if their write was not persisted.
 
+> [!NOTE]
+> **Failure Status Codes:** `400 Bad Request` is returned for malformed input (e.g., invalid Zod schema validation), while `409 Conflict` or `500 Internal Server Error` are reserved strictly for database transaction contention or system faults.
+
 ### Test 2: Burst Behavior
 
 *   **Connections**: 200 concurrent clients

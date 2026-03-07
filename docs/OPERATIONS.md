@@ -38,7 +38,15 @@ If the database is lost and restored from a backup:
 
 ### Setup & Configuration
 
-**1. Anchor Directory (Git)**
+**1. Redis (Required for Production)**
+Redis is now **required** for production deployments to handle rate-limiting. Attest uses Redis as a shared backing store for its rate limiter, replacing the previous in-memory store which was vulnerable to memory leaks under sustained load.
+
+Configure the Redis connection via the `REDIS_URL` environment variable:
+```bash
+REDIS_URL=redis://localhost:6379
+```
+
+**2. Anchor Directory (Git)**
 The anchoring system requires a local Git repository to store anchor files.
 1.  Create a new Git repository (e.g., on GitHub/GitLab).
 2.  Clone it to the server running Attest.
@@ -134,7 +142,17 @@ Attest provides tamper-evidence, not automatic enforcement. Operators are respon
 
 ## Rate Limiting Configuration
 
-Attest uses a multi-layered rate limiting strategy to protect availability.
+Attest uses a multi-layered, Redis-backed rate limiting strategy to protect availability.
+
+### Environment Variables
+
+The following environment variables control rate limiting behavior:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `ATTEST_GLOBAL_RPS` | `100` | Maximum requests per second across all projects and keys. |
+| `ATTEST_PROJECT_RPS` | `10` | Maximum requests per second per project. |
+| `ATTEST_KEY_RPS` | `5` | Maximum requests per second per API key. |
 
 ### Default Limits
 If environment variables are not set, Attest defaults to:
@@ -142,13 +160,14 @@ If environment variables are not set, Attest defaults to:
 -   **Per-Project**: 10 RPS (`ATTEST_PROJECT_RPS`)
 -   **Per-Key**: 5 RPS (`ATTEST_KEY_RPS`)
 
+All rate limiting state is stored in Redis. This ensures limits are enforced consistently across multiple API server instances and eliminates the memory leaks caused by the previous in-memory rate limit store.
+
 ### Tuning Guidance
 -   **Small Teams**: Defaults are usually sufficient.
 -   **Large Organizations**: Increase `ATTEST_GLOBAL_RPS` based on the number of active projects.
 -   **High-Volume Projects**: If a project requires >10 RPS, consider:
     1.  Batching multiple actions into one event.
     2.  Increasing `ATTEST_PROJECT_RPS` (at the cost of higher DB contention).
-    3.  Use Redis or another shared store.
 
 > [!WARNING]
 > **Do not disable rate limits entirely.**
