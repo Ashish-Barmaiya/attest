@@ -20,16 +20,23 @@ function validate(schema: z.ZodTypeAny) {
         params: req.params,
       }) as { body: any; query: any; params: any };
 
+      // 1. We can safely overwrite the body object
       req.body = validData.body;
-      req.query = validData.query;
-      req.params = validData.params;
+
+      // 2. We must assign keys individually for query and params to avoid Express getter errors
+      for (const key of Object.keys(validData.query)) {
+        req.query[key] = validData.query[key];
+      }
+      for (const key of Object.keys(validData.params)) {
+        req.params[key] = validData.params[key];
+      }
 
       next();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
+    } catch (error: any) {
+      if (error && Array.isArray(error.issues)) {
         return res.status(400).json({
           error: "Bad Request: Invalid Input",
-          details: (error as any).issues,
+          details: error.issues,
         });
       }
       next(error);
@@ -71,10 +78,29 @@ const anchorReportSchema = z.object({
   body: z
     .object({
       status: z.enum(["success", "failed"]),
-      projectCount: z.number().int().min(0),
-      anchorFile: z.string().max(1024).nullable().default(null),
-      gitCommit: z.string().max(40).nullable().default(null),
-      error: z.string().max(2048).nullable().default(null),
+      projectCount: z.number().int().min(0).optional().nullable().default(null),
+      anchorFile: z
+        .string()
+        .max(1024)
+        .optional()
+        .nullable()
+        // If the CLI sends an empty string, convert it to null for the database
+        .transform((val) => (val === "" ? null : val))
+        .default(null),
+      gitCommit: z
+        .string()
+        .max(40)
+        .optional()
+        .nullable()
+        .transform((val) => (val === "" ? null : val))
+        .default(null),
+      error: z
+        .string()
+        .max(2048)
+        .optional()
+        .nullable()
+        .transform((val) => (val === "" ? null : val))
+        .default(null),
     })
     .strict(),
   query: z.any(),

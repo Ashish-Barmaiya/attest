@@ -5,13 +5,14 @@ import fs from "fs";
 import path from "path";
 import { app } from "../src/http/app.js";
 import http from "http";
+import { randomUUID } from "node:crypto";
 
 const execAsync = util.promisify(exec);
 
 describe("Git Anchoring Integrations", () => {
   jest.setTimeout(30000);
 
-  const PROJECT_ID = "anchor-test-proj";
+  const PROJECT_ID = randomUUID();
   const ANCHOR_DIR = path.resolve("temp-jest-anchors");
   let server: http.Server;
 
@@ -37,8 +38,10 @@ describe("Git Anchoring Integrations", () => {
     fs.mkdirSync(ANCHOR_DIR);
     await execAsync("git init", { cwd: ANCHOR_DIR });
 
-    // 2. Setup the DB state
+    // 2. Setup the DB state (wipe everything)
+    await prisma.anchorReport.deleteMany({});
     await prisma.project.deleteMany({ where: { id: PROJECT_ID } });
+
     await prisma.project.create({
       data: {
         id: PROJECT_ID,
@@ -46,6 +49,7 @@ describe("Git Anchoring Integrations", () => {
         createdAt: BigInt(Date.now()),
       },
     });
+
     await prisma.chainHead.create({
       data: {
         projectId: PROJECT_ID,
@@ -62,6 +66,7 @@ describe("Git Anchoring Integrations", () => {
     });
 
     fs.rmSync(ANCHOR_DIR, { recursive: true, force: true });
+    await prisma.anchorReport.deleteMany({});
     await prisma.project.deleteMany({ where: { id: PROJECT_ID } });
     await prisma.$disconnect();
   });
@@ -75,6 +80,9 @@ describe("Git Anchoring Integrations", () => {
     const run1 = await prisma.anchorReport.findFirst({
       orderBy: { time: "desc" },
     });
+
+    // If the script failed, run1 will be null, exposing the error.
+    expect(run1).not.toBeNull();
     expect(run1).toBeDefined();
     expect(run1?.gitCommit).toBeDefined();
 
@@ -93,6 +101,9 @@ describe("Git Anchoring Integrations", () => {
     const run2 = await prisma.anchorReport.findFirst({
       orderBy: { time: "desc" },
     });
+
+    expect(run2).not.toBeNull();
+
     const file2 = fs.readFileSync(
       path.join(ANCHOR_DIR, run2!.anchorFile!),
       "utf-8",
