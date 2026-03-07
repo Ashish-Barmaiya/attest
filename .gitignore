@@ -24,3 +24,5 @@ test-anchors-prod/
 .idea/
 
 attest-demo2.cast
+
+*.stackdump
