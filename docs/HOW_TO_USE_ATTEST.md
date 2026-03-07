@@ -154,21 +154,21 @@ attest project create my-app-prod
 Response:
 ```json
 {
-  "projectId": "...",
+  "projectId": "123e4567-e89b-12d3-a456-426614174000",
   "name": "my-app-prod"
 }
 ```
 
 ### Create an API Key
 ```bash
-attest key create <projectId>
+attest key create 123e4567-e89b-12d3-a456-426614174000
 ```
 
 Response:
 ```json
 {
   "apiKey": "RAW_SECRET_KEY",
-  "keyId": "key-uuid"
+  "keyId": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 }
 ```
 > [!WARNING]
@@ -238,6 +238,19 @@ await fetch(`${process.env.ATTEST_API_URL}/events`, {
 });
 ```
 Applications should treat Attest as write-only infrastructure and should not attempt to interpret or mutate stored audit data.
+
+### Error Handling
+
+Attest uses strict Zod schemas for input validation. If a request is malformed, the server returns a `400 Bad Request` with a `details` array identifying the exact failures:
+
+```json
+{
+  "error": "Bad Request: Invalid Input",
+  "details": [
+    { "path": ["body", "name"], "message": "String must contain at least 3 character(s)" }
+  ]
+}
+```
 
 Attest responds with:
 ```json

@@ -14,6 +14,7 @@ Attest operates on a strict separation of concerns between **ingestion**, **stor
     -   **`audit_events`**: Stores the ordered log of events. Columns: `projectId`, `sequence`, `payloadJson`, `payloadHash`, `prevChainHash`, `chainHash`.
     -   **`chain_head`**: Stores the pointer to the latest event (`lastSequence`, `lastChainHash`) for optimistic locking and quick lookups.
     -   Updates to `chain_head` are serialized per project to ensure a single, linear history.
+    -   **Referential Integrity**: Relationships between `audit_events`, `chain_head`, `api_keys`, and `projects` are now strictly enforced at the database level using Postgres Foreign Key Constraints, not just application logic. This prevents orphaned records and ensures data consistency even if application-level checks are bypassed.
 
 3.  **Anchoring (External)**:
     -   A background process periodically reads the `chain_head` of all projects.
