@@ -8,6 +8,24 @@
   <i>Prove your audit history hasn’t been rewritten — even by you.</i>
 </p>
 
+<p align="center">
+  <a href="https://github.com/Ashish-Barmaiya/attest/releases">
+    <img src="https://img.shields.io/github/v/release/Ashish-Barmaiya/attest?color=success&label=Release" alt="Release">
+  </a>
+  <a href="https://github.com/Ashish-Barmaiya/attest/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/Ashish-Barmaiya/attest/ci.yml?branch=main&label=CI" alt="CI Status">
+  </a>
+  <a href="https://github.com/Ashish-Barmaiya/attest/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+  </a>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white" alt="Node.js">
+  <img src="https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker">
+</p>
+
 ---
 
 Attest is a <b>multi-tenant, append-only audit logging service</b> that provides cryptographic proof that audit history has <b>not been silently rewritten</b>.  
